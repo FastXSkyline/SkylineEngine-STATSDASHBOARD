@@ -13,7 +13,6 @@
   },
   "d1_databases": [
     {
-
       "binding": "DB",
       "database_name": "skylineenginestatsdb",
       "database_id": "19cf9e65-639f-4289-b2ef-c5d78696638f"
