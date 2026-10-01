@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Skyline Engine | Stats Dashboard</title>
+<link rel="stylesheet" href="/style.css">
+<script src="/app.js" defer></script>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+<div class="brand"><div class="brand-icon">S</div><div><div class="brand-name">SKYLINE</div><div class="brand-sub">ENGINE</div></div></div>
+<div class="nav-label">MENU</div>
+<a class="nav-link active" href="/"><span class="nav-icon">▦</span>Dashboard</a>
+<a class="nav-link" href="#analytics"><span class="nav-icon">▥</span>Analytics</a>
+<a class="nav-link" href="#users"><span class="nav-icon">♙</span>Users</a>
+<div class="sidebar-bottom"><div class="status-dot"></div><span>System online</span><div class="version">v1.0</div></div>
+</aside>
+<main class="main">
+<header class="topbar"><div><div class="eyebrow">OVERVIEW / DASHBOARD</div><h1>Dashboard <span class="red-dot">.</span></h1><p class="subtitle">Monitor your application performance and usage.</p></div><div class="top-actions"><div class="live-badge"><span></span>LIVE</div><button id="refreshBtn" class="refresh-btn">↻ <span>Refresh</span></button></div></header>
+<section class="stats-grid">
+<article class="stat-card"><div class="stat-top"><span class="stat-label">TOTAL LAUNCHES</span><span class="stat-icon">↗</span></div><div class="stat-number" id="totalLaunches">—</div><div class="stat-foot"><span class="red-text">●</span> All recorded launches</div></article>
+<article class="stat-card"><div class="stat-top"><span class="stat-label">TOTAL USERS</span><span class="stat-icon">♙</span></div><div class="stat-number" id="totalUsers">—</div><div class="stat-foot"><span class="red-text">●</span> Unique user IDs</div></article>
+<article class="stat-card"><div class="stat-top"><span class="stat-label">TODAY'S LAUNCHES</span><span class="stat-icon">◷</span></div><div class="stat-number muted-number">—</div><div class="stat-foot">Requires launch timestamps</div></article>
+<article class="stat-card"><div class="stat-top"><span class="stat-label">CURRENTLY ONLINE</span><span class="stat-icon">⌁</span></div><div class="stat-number muted-number">—</div><div class="stat-foot">Requires online tracking</div></article>
+</section>
+<section class="content-grid" id="analytics">
+<article class="panel chart-panel"><div class="panel-header"><div><h2>Launch activity</h2><p>Daily application launches</p></div><div class="period-select">Last 7 days <span>⌄</span></div></div><div class="chart-wrap"><div id="chartEmpty" class="chart-empty"><div class="empty-icon">▥</div><strong>No daily data yet</strong><span>Daily charts will appear after launch timestamps are added.</span></div></div></article>
+<article class="panel summary-panel"><div class="panel-header"><div><h2>Overview</h2><p>Application statistics</p></div><span class="summary-icon">⌁</span></div>
+<div class="summary-row"><div class="summary-symbol red-bg">↗</div><div class="summary-copy"><span>Total launches</span><strong id="summaryLaunches">—</strong></div></div>
+<div class="summary-row"><div class="summary-symbol gray-bg">♙</div><div class="summary-copy"><span>Unique users</span><strong id="summaryUsers">—</strong></div></div>
+<div class="summary-row"><div class="summary-symbol gray-bg">◷</div><div class="summary-copy"><span>Last updated</span><strong id="lastUpdated">—</strong></div></div>
+<div class="summary-note"><span class="note-dot"></span>Connected to Skyline API</div></article>
+</section>
+<section class="panel users-panel" id="users"><div class="panel-header"><div><h2>Recent activity</h2><p>Launch records from your application</p></div><span class="table-tag">D1 DATABASE</span></div><div class="table-wrap"><table><thead><tr><th>USER ID</th><th>APP VERSION</th><th>STATUS</th></tr></thead><tbody><tr><td colspan="3" class="empty-table">Individual launch records are not available in the current API.</td></tr></tbody></table></div></section>
+<footer><span>SKYLINE ENGINE <b>STATS DASHBOARD</b></span><span>SECURE CONNECTION <i></i></span></footer>
+</main>
+</div>
+</body>
+</html>
