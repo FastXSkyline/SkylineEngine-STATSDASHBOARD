@@ -170,7 +170,11 @@ async function sendLoginCode(request, env) {
     const body = await request.json();
     const email = String(body.email || "").trim().toLowerCase();
     if (!ADMIN_EMAILS.has(email)) return json({ error: "This email is not authorized." }, 403);
-    if (!env.V4) return json({ error: "Email service is not configured." }, 503);
+return json({
+  hasV4: typeof env.V4 !== "undefined",
+  isString: typeof env.V4 === "string",
+  length: env.V4?.length ?? 0
+}, 200);
     await ensureAuthTables(env.DB);
     const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
     const expiresAt = Math.floor(Date.now() / 1000) + 600;
