@@ -170,7 +170,7 @@ async function sendLoginCode(request, env) {
     const body = await request.json();
     const email = String(body.email || "").trim().toLowerCase();
     if (!ADMIN_EMAILS.has(email)) return json({ error: "This email is not authorized." }, 403);
-if (!env.V4) return json({ error: "Email service is not configured." }, 503);
+if (!env.emailsender) return json({ error: "Email service is not configured." }, 503);
     await ensureAuthTables(env.DB);
     const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
     const expiresAt = Math.floor(Date.now() / 1000) + 600;
@@ -178,7 +178,7 @@ if (!env.V4) return json({ error: "Email service is not configured." }, 503);
     await env.DB.prepare("INSERT INTO admin_login_codes (email, code_hash, expires_at, attempts) VALUES (?, ?, ?, 0) ON CONFLICT(email) DO UPDATE SET code_hash=excluded.code_hash, expires_at=excluded.expires_at, attempts=0").bind(email, codeHash, expiresAt).run();
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { "Authorization": `Bearer ${env.V4}`, "Content-Type": "application/json" },
+      headers: { "Authorization": `Bearer ${env.emailsender}`, "Content-Type": "application/json" },
       body: JSON.stringify({ from: "Skyline Engine <onboarding@resend.dev>", to: [email], subject: "Your Skyline Engine login code", text: `Your Skyline Engine admin verification code is ${code}. It expires in 10 minutes.` })
     });
     if (!response.ok) {
