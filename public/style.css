@@ -825,3 +825,16 @@ footer span:last-child{display:flex;align-items:center;gap:8px}
   .bl-label{width:64px}
   .trio-item strong{font-size:13px}
 }
+
+
+/* Skyline Engine logo asset */
+.brand-logo{
+  display:block;
+  width:132px;
+  height:36px;
+  object-fit:contain;
+  object-position:left center;
+  flex:none;
+}
+.sidebar .brand-logo{width:132px;height:36px}
+.sidebar-collapsed .brand-logo{width:38px;height:38px;object-position:center}
