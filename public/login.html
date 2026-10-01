@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090a10">
+<title>Skyline Engine | Admin Login</title>
+<link rel="stylesheet" href="/login.css">
+<script src="/login.js" defer></script>
+</head>
+<body>
+<main class="login-shell">
+  <div class="login-glow"></div>
+  <section class="login-card">
+    <a class="brand" href="/" aria-label="Skyline Engine"><span class="brand-icon">S</span><span class="brand-copy"><span class="brand-name">Skyline</span><span class="brand-sub">Engine</span></span></a>
+    <div class="eyebrow"><span class="status-dot"></span> SECURE ADMIN ACCESS</div>
+    <h1>Welcome <span>back.</span></h1>
+    <p class="subtitle">Sign in to your Skyline Engine command surface.</p>
+    <form id="emailForm">
+      <label for="email">Admin email</label>
+      <input id="email" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
+      <button id="sendBtn" type="submit">Send verification code <span aria-hidden="true">↗</span></button>
+    </form>
+    <form id="codeForm" hidden>
+      <label for="code">Verification code</label>
+      <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required>
+      <button id="verifyBtn" type="submit">Verify &amp; continue <span aria-hidden="true">↗</span></button>
+      <button class="text-button" id="backBtn" type="button">Use a different email</button>
+    </form>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+    <div class="card-footer"><span><i></i> Protected dashboard</span><span>SKYLINE / ADMIN</span></div>
+  </section>
+  <footer>SKYLINE ENGINE <b>·</b> PRIVATE CONTROL PANEL</footer>
+</main>
+</body>
+</html>
