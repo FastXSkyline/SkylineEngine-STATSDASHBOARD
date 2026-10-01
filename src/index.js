@@ -11,42 +11,7 @@ export default {
     if (url.pathname === "/api/auth/logout" && request.method === "POST") return logout(request, env);
     if (url.pathname === "/api/auth/session" && request.method === "GET") return json({ authenticated: await isAuthenticated(request, env) });
 
-  if (
-  (url.pathname === "/login" || url.pathname === "/login.html") &&
-  request.method === "GET"
-) {
-  return env.ASSETS.fetch(
-    new Request(new URL("/login.html", request.url), {
-      method: "GET",
-      headers: request.headers
-    })
-  );
-}
-
-if (
-  url.pathname !== "/launch" &&
-  !["/login.css", "/login.js"].includes(url.pathname) &&
-  !(await isAuthenticated(request, env))
-) {
-  if (url.pathname.startsWith("/api/")) {
-    return json({ error: "Unauthorized" }, 401);
-  }
-
-  return Response.redirect(new URL("/login", request.url), 302);
-}
-
-   if (
-  (url.pathname === "/login" || url.pathname === "/login.html") &&
-  request.method === "GET"
-) {
-  if (await isAuthenticated(request, env)) {
-    return Response.redirect(new URL("/", request.url), 302);
-  }
-
-  return env.ASSETS.fetch(
-    new Request(new URL("/login.html", request.url), request)
-  );
-}
+  // Authentication temporarily disabled. The dashboard is publicly accessible while the login system is being repaired.
 
     if (url.pathname === "/launch" && request.method === "POST") {
       try {
