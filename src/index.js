@@ -6,8 +6,7 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders() });
     }
 
-    if (url.pathname === "/api/auth/send" && request.method === "POST") return sendLoginCode(request, env);
-    if (url.pathname === "/api/auth/verify" && request.method === "POST") return verifyLoginCode(request, env);
+    if (url.pathname === "/api/auth/login" && request.method === "POST") return loginWithPassword(request, env);
     if (url.pathname === "/api/auth/logout" && request.method === "POST") return logout(request, env);
     if (url.pathname === "/api/auth/session" && request.method === "GET") return json({ authenticated: await isAuthenticated(request, env) });
 
@@ -165,55 +164,44 @@ async function isAuthenticated(request, env) {
   return true;
 }
 
-async function sendLoginCode(request, env) {
+async function loginWithPassword(request, env) {
   try {
     const body = await request.json();
     const email = String(body.email || "").trim().toLowerCase();
-    if (!ADMIN_EMAILS.has(email)) return json({ error: "This email is not authorized." }, 403);
-    const resendApiKey = env.V4 || env.emailsender;
-    if (!resendApiKey) return json({ error: "Email service is not configured." }, 503);
-    await ensureAuthTables(env.DB);
-    const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
-    const expiresAt = Math.floor(Date.now() / 1000) + 600;
-    const codeHash = await sha256(`${email}:${code}`);
-    await env.DB.prepare("INSERT INTO admin_login_codes (email, code_hash, expires_at, attempts) VALUES (?, ?, ?, 0) ON CONFLICT(email) DO UPDATE SET code_hash=excluded.code_hash, expires_at=excluded.expires_at, attempts=0").bind(email, codeHash, expiresAt).run();
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: "Skyline Engine <onboarding@resend.dev>", to: [email], subject: "Your Skyline Engine login code", text: `Your Skyline Engine admin verification code is ${code}. It expires in 10 minutes.` })
-    });
-    if (!response.ok) {
-      await env.DB.prepare("DELETE FROM admin_login_codes WHERE email = ?").bind(email).run();
-      return json({ error: "Could not send the email. Check your Resend setup and verified domain." }, 502);
-    }
-    return json({ success: true });
-  } catch (error) {
-    return json({ error: "Could not send verification code." }, 500);
-  }
-}
+    const password = String(body.password || "");
 
-async function verifyLoginCode(request, env) {
-  try {
-    const body = await request.json();
-    const email = String(body.email || "").trim().toLowerCase();
-    const code = String(body.code || "").trim();
-    if (!ADMIN_EMAILS.has(email) || !/^\d{6}$/.test(code)) return json({ error: "Invalid email or code." }, 400);
-    await ensureAuthTables(env.DB);
-    const row = await env.DB.prepare("SELECT code_hash, expires_at, attempts FROM admin_login_codes WHERE email = ?").bind(email).first();
-    if (!row || row.expires_at < Math.floor(Date.now() / 1000) || row.attempts >= 5) return json({ error: "Code expired. Request a new one." }, 400);
-    const expected = await sha256(`${email}:${code}`);
-    if (expected !== row.code_hash) {
-      await env.DB.prepare("UPDATE admin_login_codes SET attempts = attempts + 1 WHERE email = ?").bind(email).run();
-      return json({ error: "Incorrect verification code." }, 400);
+    if (!ADMIN_EMAILS.has(email)) {
+      return json({ error: "Invalid email or password." }, 401);
     }
-    await env.DB.prepare("DELETE FROM admin_login_codes WHERE email = ?").bind(email).run();
+
+    if (!env.ADMIN_PASSWORD) {
+      return json({ error: "Admin password is not configured." }, 503);
+    }
+
+    const passwordHash = await sha256(password);
+    const expectedHash = await sha256(env.ADMIN_PASSWORD);
+    if (passwordHash !== expectedHash) {
+      return json({ error: "Invalid email or password." }, 401);
+    }
+
+    await ensureAuthTables(env.DB);
     const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
     const token = Array.from(tokenBytes, (b) => b.toString(16).padStart(2, "0")).join("");
     const expiresAt = Math.floor(Date.now() / 1000) + 7 * 86400;
-    await env.DB.prepare("INSERT INTO admin_sessions (token_hash, email, expires_at) VALUES (?, ?, ?)").bind(await sha256(token), email, expiresAt).run();
-    return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json", "Set-Cookie": `${SESSION_COOKIE}=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${7 * 86400}`, ...corsHeaders() } });
+
+    await env.DB.prepare(
+      "INSERT INTO admin_sessions (token_hash, email, expires_at) VALUES (?, ?, ?)"
+    ).bind(await sha256(token), email, expiresAt).run();
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": `${SESSION_COOKIE}=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${7 * 86400}`,
+        ...corsHeaders()
+      }
+    });
   } catch (error) {
-    return json({ error: "Could not verify code." }, 500);
+    return json({ error: "Login failed." }, 500);
   }
 }
 
