@@ -171,8 +171,8 @@ async function sendLoginCode(request, env) {
     const email = String(body.email || "").trim().toLowerCase();
     if (!ADMIN_EMAILS.has(email)) return json({ error: "This email is not authorized." }, 403);
 
-    const resendApiKey = env.V4 || env.emailsender;
-    if (!resendApiKey) return json({ error: "Email service is not configured." }, 503);
+    const brevoApiKey = env.SkylineEngine;
+    if (!brevoApiKey) return json({ error: "Email service is not configured." }, 503);
 
     await ensureAuthTables(env.DB);
     const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
@@ -183,23 +183,37 @@ async function sendLoginCode(request, env) {
       "INSERT INTO admin_login_codes (email, code_hash, expires_at, attempts) VALUES (?, ?, ?, 0) ON CONFLICT(email) DO UPDATE SET code_hash=excluded.code_hash, expires_at=excluded.expires_at, attempts=0"
     ).bind(email, codeHash, expiresAt).run();
 
-    const response = await fetch("https://api.resend.com/emails", {
+    const senderEmail = env.BREVO_SENDER_EMAIL || "fastxgod01@gmail.com";
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${resendApiKey}`,
+        "api-key": brevoApiKey,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "Skyline Engine <onboarding@resend.dev>",
-        to: [email],
+        sender: {
+          name: "Skyline Engine",
+          email: senderEmail
+        },
+        to: [{ email }],
         subject: "Your Skyline Engine login code",
-        text: `Your Skyline Engine admin verification code is ${code}. It expires in 10 minutes.`
+        textContent: `Your Skyline Engine admin verification code is ${code}. It expires in 10 minutes.`
       })
     });
 
     if (!response.ok) {
+      const responseText = await response.text();
       await env.DB.prepare("DELETE FROM admin_login_codes WHERE email = ?").bind(email).run();
-      return json({ error: "Could not send the email. Check your Resend setup and verified domain." }, 502);
+
+      let resendError = "Brevo rejected the email.";
+      try {
+        const data = JSON.parse(responseText);
+        if (typeof data?.message === "string" && data.message.trim()) {
+          resendError = data.message.trim().slice(0, 300);
+        }
+      } catch {}
+
+      return json({ error: resendError }, 502);
     }
 
     return json({ success: true });
