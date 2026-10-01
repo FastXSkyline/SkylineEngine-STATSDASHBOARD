@@ -19,9 +19,18 @@ export default {
       return Response.redirect(new URL("/login", request.url), 302);
     }
 
-    if (url.pathname === "/login" && request.method === "GET") {
-      return Response.redirect(new URL("/", request.url), 302);
-    }
+   if (
+  (url.pathname === "/login" || url.pathname === "/login.html") &&
+  request.method === "GET"
+) {
+  if (await isAuthenticated(request, env)) {
+    return Response.redirect(new URL("/", request.url), 302);
+  }
+
+  return env.ASSETS.fetch(
+    new Request(new URL("/login.html", request.url), request)
+  );
+}
 
     if (url.pathname === "/launch" && request.method === "POST") {
       try {
