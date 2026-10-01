@@ -11,13 +11,29 @@ export default {
     if (url.pathname === "/api/auth/logout" && request.method === "POST") return logout(request, env);
     if (url.pathname === "/api/auth/session" && request.method === "GET") return json({ authenticated: await isAuthenticated(request, env) });
 
-    if (url.pathname !== "/launch" && !["/login", "/login.html", "/login.css", "/login.js"].includes(url.pathname) && !(await isAuthenticated(request, env))) {
-      if (url.pathname.startsWith("/api/")) return json({ error: "Unauthorized" }, 401);
-      if (url.pathname === "/login" || url.pathname === "/login.html" || url.pathname === "/") {
-        return env.ASSETS.fetch(new Request(new URL("/login.html", request.url), request));
-      }
-      return Response.redirect(new URL("/login", request.url), 302);
-    }
+  if (
+  (url.pathname === "/login" || url.pathname === "/login.html") &&
+  request.method === "GET"
+) {
+  return env.ASSETS.fetch(
+    new Request(new URL("/login.html", request.url), {
+      method: "GET",
+      headers: request.headers
+    })
+  );
+}
+
+if (
+  url.pathname !== "/launch" &&
+  !["/login.css", "/login.js"].includes(url.pathname) &&
+  !(await isAuthenticated(request, env))
+) {
+  if (url.pathname.startsWith("/api/")) {
+    return json({ error: "Unauthorized" }, 401);
+  }
+
+  return Response.redirect(new URL("/login", request.url), 302);
+}
 
    if (
   (url.pathname === "/login" || url.pathname === "/login.html") &&
