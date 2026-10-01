@@ -171,7 +171,7 @@ async function sendLoginCode(request, env) {
     const email = String(body.email || "").trim().toLowerCase();
     if (!ADMIN_EMAILS.has(email)) return json({ error: "This email is not authorized." }, 403);
 
-    const brevoApiKey = env.SkylineEngine;
+    const brevoApiKey = env.SkylineEngineV1;
     if (!brevoApiKey) return json({ error: "Email service is not configured." }, 503);
 
     await ensureAuthTables(env.DB);
