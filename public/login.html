@@ -16,12 +16,16 @@
     <div class="eyebrow"><span class="status-dot"></span> SECURE ADMIN ACCESS</div>
     <h1>Welcome <span>back.</span></h1>
     <p class="subtitle">Sign in to your Skyline Engine command surface.</p>
-    <form id="loginForm">
+    <form id="emailForm">
       <label for="email">Admin email</label>
-      <input id="email" name="email" type="email" autocomplete="username" placeholder="name@example.com" required>
-      <label for="password">Password</label>
-      <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
-      <button id="loginBtn" type="submit">Sign in <span aria-hidden="true">↗</span></button>
+      <input id="email" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
+      <button id="sendBtn" type="submit">Send verification code <span aria-hidden="true">↗</span></button>
+    </form>
+    <form id="codeForm" hidden>
+      <label for="code">Verification code</label>
+      <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required>
+      <button id="verifyBtn" type="submit">Verify &amp; continue <span aria-hidden="true">↗</span></button>
+      <button class="text-button" id="backBtn" type="button">Use a different email</button>
     </form>
     <p id="message" class="message" role="status" aria-live="polite"></p>
     <div class="card-footer"><span><i></i> Protected dashboard</span><span>SKYLINE / ADMIN</span></div>
