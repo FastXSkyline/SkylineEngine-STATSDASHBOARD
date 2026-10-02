@@ -72,14 +72,11 @@
       </div>
 
       <h1>Welcome back.</h1>
-      <p class="subtitle">Sign in with your KeyAuth account to continue.</p>
+      <p class="subtitle">Enter your license key to continue.</p>
 
       <form id="loginForm">
-        <label for="username">KeyAuth username</label>
-        <input id="username" name="username" type="text" autocomplete="username" placeholder="Username" required>
-
-        <label for="password">Password</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Password" required>
+        <label for="licenseKey">License key</label>
+        <input id="licenseKey" name="licenseKey" type="text" autocomplete="off" spellcheck="false" placeholder="Enter your license key" required>
 
         <button id="loginBtn" type="submit">Sign in <span aria-hidden="true">↗</span></button>
       </form>
