@@ -162,6 +162,7 @@ async function ensureTelemetrySchema(db) {
 async function ensureAuthTables(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS admin_login_codes (email TEXT PRIMARY KEY, code_hash TEXT NOT NULL, expires_at INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS admin_sessions (token_hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires_at INTEGER NOT NULL)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS keyauth_device_bindings (username TEXT PRIMARY KEY, device_hash TEXT NOT NULL, bound_at INTEGER NOT NULL)").run();
 }
 
 async function sha256(value) {
@@ -186,6 +187,11 @@ async function isAuthenticated(request, env) {
   const session = await env.DB.prepare("SELECT email, expires_at FROM admin_sessions WHERE token_hash = ?").bind(tokenHash).first();
   if (!session || session.expires_at < Math.floor(Date.now() / 1000)) return false;
   return String(session.email || "").startsWith("keyauth:");
+}
+
+function getDeviceId(request) {
+  const value = request.headers.get("X-Skyline-Device");
+  return typeof value === "string" && value.length >= 32 && value.length <= 128 ? value : "";
 }
 
 async function keyAuthLogin(request, env) {
@@ -229,6 +235,26 @@ async function keyAuthLogin(request, env) {
     }
 
     await ensureAuthTables(env.DB);
+
+    const deviceId = getDeviceId(request);
+    if (!deviceId) {
+      return json({ error: "A browser device identifier is required." }, 400);
+    }
+
+    const deviceHash = await sha256(deviceId);
+    const existingBinding = await env.DB.prepare(
+      "SELECT device_hash FROM keyauth_device_bindings WHERE username = ?"
+    ).bind(username).first();
+
+    if (existingBinding && existingBinding.device_hash !== deviceHash) {
+      return json({ error: "This KeyAuth account is already bound to another browser device." }, 403);
+    }
+
+    if (!existingBinding) {
+      await env.DB.prepare(
+        "INSERT INTO keyauth_device_bindings (username, device_hash, bound_at) VALUES (?, ?, ?)"
+      ).bind(username, deviceHash, Math.floor(Date.now() / 1000)).run();
+    }
 
     const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
     const token = Array.from(tokenBytes, (b) => b.toString(16).padStart(2, "0")).join("");
