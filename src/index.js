@@ -720,7 +720,7 @@ async function buildStats(db, days, recentMode = "grouped", recentPage = 1) {
        GROUP BY user_id
        ORDER BY last_at DESC
        LIMIT 20`
-    )))
+    ))
   ]);
 
   const totalsRow = totals || {};
