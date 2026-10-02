@@ -940,3 +940,131 @@ function setupFiveMView(){
   document.getElementById("fivemEmptyCreate")?.addEventListener("click",create);
 }
 document.addEventListener("DOMContentLoaded",setupFiveMView);
+
+const fivemState = { files: [], editingId: null };
+
+async function fivemRequest(path = "", options = {}) {
+  const response = await fetch("/api/fivem/files" + path, {
+    cache: "no-store",
+    credentials: "same-origin",
+    ...options,
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (response.status === 401) { location.replace("/login.html"); throw new Error("Authentication required."); }
+  if (!response.ok) throw new Error(data?.error || "Request failed (" + response.status + ")");
+  return data;
+}
+
+function fivemSetForm(file = null) {
+  $("fivemModalTitle").textContent = file ? "Edit file" : "Create file";
+  $("fivemName").value = file?.name || "";
+  $("fivemVersion").value = file?.version || "";
+  $("fivemDescription").value = file?.description || "";
+  $("fivemUrl").value = file?.download_url || "";
+  $("fivemFileName").value = file?.file_name || "";
+  $("fivemCategory").value = file?.category || "Application";
+  $("fivemPlatform").value = file?.platform || "Windows";
+  $("fivemPublished").checked = Number(file?.published) === 1;
+  $("fivemFormError").hidden = true;
+}
+
+function openFiveMModal(file = null) {
+  fivemState.editingId = file?.id || null;
+  fivemSetForm(file);
+  $("fivemModal").hidden = false;
+  document.body.classList.add("fivem-modal-open");
+  setTimeout(() => $("fivemName")?.focus(), 20);
+}
+
+function closeFiveMModal() {
+  $("fivemModal").hidden = true;
+  document.body.classList.remove("fivem-modal-open");
+  fivemState.editingId = null;
+}
+
+function renderFiveMFiles() {
+  const list = $("fivemList");
+  const empty = $("fivemEmpty");
+  if (!list || !empty) return;
+  const query = String($("fivemSearch")?.value || "").trim().toLowerCase();
+  const files = fivemState.files.filter(file => [file.name,file.version,file.description,file.file_name,file.category,file.platform].join(" ").toLowerCase().includes(query));
+  const published = fivemState.files.filter(file => Number(file.published) === 1).length;
+  $("fivemFileCounts").textContent = published + " published · " + (fivemState.files.length - published) + " drafts";
+  empty.hidden = files.length !== 0;
+  list.innerHTML = files.map(file => {
+    const status = Number(file.published) === 1;
+    return '<article class="fivem-file"><div class="fivem-file-main"><div class="fivem-file-top"><span class="fivem-file-name">' + escapeHtml(file.name || "Untitled file") + '</span><span class="fivem-file-version">v' + escapeHtml(file.version || "—") + '</span></div><p class="fivem-file-desc">' + escapeHtml(file.description || "No description added.") + '</p><div class="fivem-file-meta"><span>' + escapeHtml(file.file_name || "No file name") + '</span><span>' + escapeHtml(file.category || "Application") + '</span><span>' + escapeHtml(file.platform || "Windows") + '</span><span class="fivem-status ' + (status ? "published" : "draft") + '">' + (status ? "Published" : "Draft") + '</span></div></div><div class="fivem-file-actions"><button class="fivem-action" data-fivem-action="edit" data-id="' + file.id + '">Edit</button><button class="fivem-action" data-fivem-action="publish" data-id="' + file.id + '">' + (status ? "Unpublish" : "Publish") + '</button><button class="fivem-action danger" data-fivem-action="delete" data-id="' + file.id + '">Delete</button></div></article>';
+  }).join("");
+}
+
+async function loadFiveMFiles() {
+  const list = $("fivemList");
+  if (!list) return;
+  list.innerHTML = '<div class="fivem-loading">Loading FiveM files…</div>';
+  try {
+    const data = await fivemRequest();
+    fivemState.files = Array.isArray(data.files) ? data.files : [];
+    renderFiveMFiles();
+  } catch (error) {
+    list.innerHTML = '<div class="fivem-loading">Could not load files: ' + escapeHtml(error.message) + '</div>';
+  }
+}
+
+async function saveFiveMFile(event) {
+  event.preventDefault();
+  const errorBox = $("fivemFormError");
+  const save = $("fivemSave");
+  const payload = { name: $("fivemName").value.trim(), version: $("fivemVersion").value.trim(), description: $("fivemDescription").value.trim(), download_url: $("fivemUrl").value.trim(), file_name: $("fivemFileName").value.trim(), category: $("fivemCategory").value.trim(), platform: $("fivemPlatform").value.trim(), published: $("fivemPublished").checked };
+  if (!payload.name) { errorBox.textContent = "File name is required."; errorBox.hidden = false; return; }
+  save.disabled = true;
+  save.textContent = "Saving…";
+  errorBox.hidden = true;
+  try {
+    const path = fivemState.editingId ? "/" + fivemState.editingId : "";
+    await fivemRequest(path, { method: fivemState.editingId ? "PUT" : "POST", body: JSON.stringify(payload) });
+    closeFiveMModal();
+    await loadFiveMFiles();
+  } catch (error) {
+    errorBox.textContent = error.message;
+    errorBox.hidden = false;
+  } finally { save.disabled = false; save.textContent = "Save file"; }
+}
+
+async function handleFiveMAction(event) {
+  const button = event.target.closest("[data-fivem-action]");
+  if (!button) return;
+  const id = Number(button.dataset.id);
+  const file = fivemState.files.find(item => Number(item.id) === id);
+  if (!file) return;
+  const action = button.dataset.fivemAction;
+  if (action === "edit") return openFiveMModal(file);
+  if (action === "delete") {
+    if (!window.confirm('Delete "' + file.name + '"? This cannot be undone.')) return;
+    try { await fivemRequest("/" + id, { method: "DELETE" }); await loadFiveMFiles(); } catch (error) { window.alert(error.message); }
+    return;
+  }
+  if (action === "publish") {
+    try {
+      await fivemRequest("/" + id, { method: "PUT", body: JSON.stringify({ ...file, published: Number(file.published) !== 1 }) });
+      await loadFiveMFiles();
+    } catch (error) { window.alert(error.message); }
+  }
+}
+
+function setupFiveMManager() {
+  if (!$("fivemList")) return;
+  $("fivemCreateBtn")?.addEventListener("click", () => openFiveMModal());
+  $("fivemEmptyCreate")?.addEventListener("click", () => openFiveMModal());
+  $("fivemModalClose")?.addEventListener("click", closeFiveMModal);
+  $("fivemCancel")?.addEventListener("click", closeFiveMModal);
+  $("fivemForm")?.addEventListener("submit", saveFiveMFile);
+  $("fivemList")?.addEventListener("click", handleFiveMAction);
+  $("fivemSearch")?.addEventListener("input", renderFiveMFiles);
+  $("fivemModal")?.addEventListener("click", event => { if (event.target === $("fivemModal")) closeFiveMModal(); });
+  document.addEventListener("keydown", event => { if (event.key === "Escape" && !$("fivemModal").hidden) closeFiveMModal(); });
+  loadFiveMFiles();
+}
+
+document.addEventListener("DOMContentLoaded", setupFiveMManager);
+
