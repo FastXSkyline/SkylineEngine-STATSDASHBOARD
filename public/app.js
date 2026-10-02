@@ -671,7 +671,7 @@ async function loadStats() {
   statsGrid.classList.add("is-loading");
 
   try {
-    const response = await fetch(`${API_URL}?days=${state.days}`, { cache: "no-store" });
+    const response = await fetch(`${API_URL}?days=${state.days}&_=${Date.now()}`, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
     if (!response.ok) throw new Error("API returned " + response.status);
 
     applyStats(await response.json());
@@ -831,4 +831,4 @@ chartPlot.addEventListener("touchstart", (event) => {
 }, { passive: true });
 
 loadStats();
-setInterval(loadStats, 30000);
+setInterval(loadStats, 5000);\ndocument.addEventListener("visibilitychange", () => {\n  if (!document.hidden) loadStats();\n});
