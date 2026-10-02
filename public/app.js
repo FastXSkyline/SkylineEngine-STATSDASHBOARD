@@ -481,80 +481,84 @@ function renderRecentGrouped(rows) {
   for (const row of rows) {
     const key = row.userId || `row-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
     if (!groups.has(key)) {
-      groups.set(key, { id: key, name: row.userName || "Unknown", userId: row.userId, launches: [], total: 0 });
+      groups.set(key, {
+        id: key,
+        name: row.userName || "Unknown",
+        userId: row.userId,
+        launches: [],
+        total: 0
+      });
     }
+
     const group = groups.get(key);
     group.launches.push(row);
-    group.total += (row.launches || 0) || 0;
+    group.total += Number(row.launches || 0);
   }
 
   const ordered = Array.from(groups.values()).sort((a, b) => {
-    const aFirst = a.launches[0];
-    const bFirst = b.launches[0];
-    return (bFirst.createdAt || "") < (aFirst.createdAt || "") ? -1 : 1;
+    const aLatest = a.launches.reduce((latest, row) => row.createdAt > latest ? row.createdAt : latest, "");
+    const bLatest = b.launches.reduce((latest, row) => row.createdAt > latest ? row.createdAt : latest, "");
+    return bLatest.localeCompare(aLatest);
   });
 
   body.innerHTML = ordered
     .map((group) => {
-      const rows = group.launches;
-      const first = rows[0];
+      const groupRows = group.launches;
       const name = group.name || "Unknown";
-      const shortId = group.userId ? (String(group.userId).length > 14 ? `${String(group.userId).slice(0, 14)}…` : String(group.userId)) : "";
-      const badge = first.isNew ? "badge-new" : "badge-repeat";
-      const badgeLabel = first.isNew ? "New" : "Returning";
+      const shortId = group.userId
+        ? (String(group.userId).length > 14
+            ? `${String(group.userId).slice(0, 14)}…`
+            : String(group.userId))
+        : "";
 
       return (
-        `<div class="user-pack" data-user="${escapeHtml(group.id)}">` +
-        `<div class="user-pack-header">` +
-        `<span class="user-pack-name">${escapeHtml(name)}</span>` +
-        `<span class="user-pack-count">${rows.length} launch${rows.length === 1 ? "" : "s"} · ${group.total} run${group.total === 1 ? "" : "s"}</span>` +
-        `<span class="user-pack-toggle" aria-expanded="false" aria-label="Toggle launches for ${escapeHtml(name)}">` +
-        `<svg class="ic ic-14" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9.5 12 15.5 18 9.5"/></svg>` +
-        `</span>` +
-        `</div>` +
-        `<div class="user-pack-body">` +
-        rows.map((row) => {
-          const name = platformName(row.os, row.osVersion);
+        `<tr class="user-group-row" data-user="${escapeHtml(group.id)}">` +
+          `<td colspan="5">` +
+            `<button class="user-group-header" type="button" aria-expanded="false">` +
+              `<span class="user-group-main">` +
+                `<span class="user-group-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>` +
+                (shortId ? `<span class="user-group-id" title="${escapeHtml(String(group.userId))}">${escapeHtml(shortId)}</span>` : "") +
+              `</span>` +
+              `<span class="user-group-meta">${groupRows.length} launch${groupRows.length === 1 ? "" : "s"} · ${group.total} run${group.total === 1 ? "" : "s"}</span>` +
+              `<span class="user-group-toggle" aria-hidden="true"><svg class="ic ic-14" viewBox="0 0 24 24"><polyline points="6 9.5 12 15.5 18 9.5"/></svg></span>` +
+            `</button>` +
+          `</td>` +
+        `</tr>` +
+        groupRows.map((row) => {
+          const platform = platformName(row.os, row.osVersion);
           return (
-            `<div class="user-pack-row">` +
-            `<span class="user-cell">` +
-            (row.userName ? `<span class="user-name" title="${escapeHtml(row.userName)}">${escapeHtml(row.userName)}</span>` : ``) +
-            `<span class="user-id" title="${escapeHtml(String(group.userId || "").slice(0, 14))}">${escapeHtml(shortId)}</span>` +
-            `</span>` +
-            `<span class="cell-version">${escapeHtml(row.appVersion || "unknown")}</span>` +
-            `<span class="cell-platform"><span class="platform-ic">${platformIcon(row.os)}</span>${escapeHtml(name)}</span>` +
-            `<span class="badge ${row.isNew ? "badge-new" : "badge-repeat"}">${badgeLabel}</span>` +
-            `<span class="num muted-cell">${relativeTime(row.createdAt)}</span>` +
-            `</div>`
+            `<tr class="user-group-detail">` +
+              `<td>${userCell(row.userName, row.userId)}</td>` +
+              `<td><span class="cell-version">${escapeHtml(row.appVersion || "unknown")}</span></td>` +
+              `<td><span class="cell-platform"><span class="platform-ic">${platformIcon(row.os)}</span>${escapeHtml(platform)}</span></td>` +
+              `<td><span class="badge ${row.isNew ? "badge-new" : "badge-repeat"}">${row.isNew ? "New" : "Returning"}</span></td>` +
+              `<td class="num muted-cell">${relativeTime(row.createdAt)}</td>` +
+            `</tr>`
           );
-        }).join("") +
-        `</div>` +
-        `</div>`
+        }).join("")
       );
     })
     .join("");
 
-  /* toggle handlers on the new pack headers */
-  body.querySelectorAll(".user-pack-header").forEach((header) => {
-    header.addEventListener("click", (event) => {
-      event.stopPropagation();
-      const pack = header.closest(".user-pack");
-      if (!pack) return;
-      const bodyEl = pack.querySelector(".user-pack-body");
-      const toggle = header.querySelector(".user-pack-toggle");
-      const isOpen = bodyEl.classList.contains("open");
+  body.querySelectorAll(".user-group-header").forEach((header) => {
+    header.addEventListener("click", () => {
+      const groupRow = header.closest(".user-group-row");
+      if (!groupRow) return;
 
-      body.querySelectorAll(".user-pack-body.open").forEach((other) => {
-        if (other !== bodyEl) other.classList.remove("open");
-        other.previousElementSibling.querySelector(".user-pack-toggle").setAttribute("aria-expanded", "false");
+      const open = header.getAttribute("aria-expanded") === "true";
+
+      body.querySelectorAll(".user-group-header[aria-expanded=\"true\"]").forEach((other) => {
+        if (other !== header) {
+          other.setAttribute("aria-expanded", "false");
+          other.closest(".user-group-row")?.classList.remove("is-open");
+        }
       });
 
-      bodyEl.classList.toggle("open", !isOpen);
-      toggle.setAttribute("aria-expanded", String(!isOpen));
+      header.setAttribute("aria-expanded", String(!open));
+      groupRow.classList.toggle("is-open", !open);
     });
   });
 }
-
 
 function emptyChipIcon() {
   return '<svg class="ic ic-14" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6.2" rx="7.5" ry="2.9"/><path d="M4.5 6.2v5.6c0 1.6 3.4 2.9 7.5 2.9s7.5-1.3 7.5-2.9V6.2"/><path d="M4.5 11.8v5.6c0 1.6 3.4 2.9 7.5 2.9s7.5-1.3 7.5-2.9v-5.6"/></svg>';
