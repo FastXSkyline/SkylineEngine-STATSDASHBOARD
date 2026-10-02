@@ -16,6 +16,7 @@ export default {
     if ((url.pathname === "/launch" || url.pathname === "/launchstats" || url.pathname === "/api/launch" || url.pathname === "/api/launchstats" || url.pathname === "/stats/launch") && request.method === "POST") {
       try {
         const rawBody = await request.json();
+        await ensureTelemetrySchema(env.DB);
         const body = rawBody?.launchstats && typeof rawBody.launchstats === "object"
           ? { ...rawBody.launchstats, ...rawBody }
           : rawBody;
@@ -80,16 +81,16 @@ export default {
     if (url.pathname === "/api/stats" && request.method === "GET") {
       try {
         const days = clampInt(url.searchParams.get("days"), 14, 1, 90);
+        await ensureTelemetrySchema(env.DB);
         return json(await buildStats(env.DB, days));
       } catch (error) {
-        // Full aggregation failed — most likely the telemetry columns from
-        // migrations/0001_telemetry_columns.sql haven't been applied yet.
-        // Fall back to the legacy totals so the dashboard keeps working.
+        // Keep a useful response if a D1 query fails, but expose the reason instead of silently
+        // turning the whole dashboard into an empty legacy view.
         try {
           const totals = await env.DB.prepare(
             "SELECT COUNT(*) AS launches, COUNT(DISTINCT user_id) AS users FROM launches"
           ).first();
-          return json(legacyStats(totals));
+          return json({ ...legacyStats(totals), errorState: true, errorMessage: String(error?.message || "Stats aggregation failed").slice(0, 300) });
         } catch (fallbackError) {
           return json({ error: "Failed to fetch stats" }, 500);
         }
@@ -109,6 +110,41 @@ export default {
 
 const ADMIN_EMAILS = new Set(["fastxgod01@gmail.com", "hackdz2006@gmail.com"]);
 const SESSION_COOKIE = "skyline_admin_session";
+
+const TELEMETRY_COLUMNS = [
+  ["created_at", "TEXT"],
+  ["os", "TEXT"],
+  ["os_version", "TEXT"],
+  ["arch", "TEXT"],
+  ["locale", "TEXT"],
+  ["tz_offset_min", "INTEGER"],
+  ["screen_w", "INTEGER"],
+  ["screen_h", "INTEGER"],
+  ["cpu_cores", "INTEGER"],
+  ["ram_gb", "INTEGER"],
+  ["event", "TEXT DEFAULT 'launch'"],
+  ["cpu_model", "TEXT"],
+  ["gpu_model", "TEXT"],
+  ["ram_free_gb", "INTEGER"],
+  ["ram_used_pct", "INTEGER"],
+  ["monitor_count", "INTEGER"],
+  ["session_id", "TEXT"]
+];
+
+async function ensureTelemetrySchema(db) {
+  for (const [column, definition] of TELEMETRY_COLUMNS) {
+    try {
+      await db.prepare(`ALTER TABLE launches ADD COLUMN ${column} ${definition}`).run();
+    } catch (_) {}
+  }
+
+  try { await db.prepare("CREATE INDEX IF NOT EXISTS idx_launches_created_at ON launches(created_at)").run(); } catch (_) {}
+  try { await db.prepare("CREATE INDEX IF NOT EXISTS idx_launches_cpu_model ON launches(cpu_model)").run(); } catch (_) {}
+  try { await db.prepare("CREATE INDEX IF NOT EXISTS idx_launches_gpu_model ON launches(gpu_model)").run(); } catch (_) {}
+  try { await db.prepare("CREATE INDEX IF NOT EXISTS idx_launches_session_id ON launches(session_id)").run(); } catch (_) {}
+}
+
+
 
 async function ensureAuthTables(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS admin_login_codes (email TEXT PRIMARY KEY, code_hash TEXT NOT NULL, expires_at INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0)").run();
