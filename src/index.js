@@ -121,6 +121,10 @@ export default {
       }
     }
 
+    if (url.pathname.startsWith("/api/public/fivem/files/") && url.pathname.endsWith("/download") && request.method === "POST") {
+      return incrementFiveMDownload(env.DB, url.pathname.split("/")[5]);
+    }
+
     if (url.pathname === "/api/fivem/files" && request.method === "GET") {
       if (!(await isAuthenticated(request, env))) return json({ error: "Authentication required." }, 401);
       return listFiveMFiles(env.DB);
@@ -243,6 +247,7 @@ async function ensureFiveMSchema(db) {
         downloadable INTEGER NOT NULL DEFAULT 1,
         license_key TEXT NOT NULL DEFAULT '',
         rar_password TEXT NOT NULL DEFAULT '',
+        download_count INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
         updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now'))
       )`
@@ -252,6 +257,7 @@ async function ensureFiveMSchema(db) {
     try { await db.prepare("ALTER TABLE fivem_files ADD COLUMN downloadable INTEGER NOT NULL DEFAULT 1").run(); } catch (_) {}
     try { await db.prepare("ALTER TABLE fivem_files ADD COLUMN license_key TEXT NOT NULL DEFAULT ''").run(); } catch (_) {}
     try { await db.prepare("ALTER TABLE fivem_files ADD COLUMN rar_password TEXT NOT NULL DEFAULT ''").run(); } catch (_) {}
+    try { await db.prepare("ALTER TABLE fivem_files ADD COLUMN download_count INTEGER NOT NULL DEFAULT 0").run(); } catch (_) {}
   })();
   return fivemSchemaPromise;
 }
@@ -891,10 +897,34 @@ function corsHeaders() {
   };
 }
 
+
+
+async function incrementFiveMDownload(db, id) {
+  try {
+    const fileId = Number.parseInt(id, 10);
+    if (!Number.isInteger(fileId) || fileId < 1) return json({ error: "Invalid file id." }, 400);
+
+    await ensureFiveMSchema(db);
+    const result = await db.prepare(
+      "UPDATE fivem_files SET download_count = download_count + 1 WHERE id = ? AND published = 1 AND downloadable = 1"
+    ).bind(fileId).run();
+
+    if (!result.meta?.changes) return json({ error: "Release not found or unavailable." }, 404);
+
+    const row = await db.prepare(
+      "SELECT download_count FROM fivem_files WHERE id = ?"
+    ).bind(fileId).first();
+
+    return json({ success: true, downloadCount: number(row?.download_count) });
+  } catch (error) {
+    return json({ error: "Failed to record download." }, 500);
+  }
+}
+
 async function listFiveMFiles(db) {
   try {
     await ensureFiveMSchema(db);
-    const result = await db.prepare("SELECT id, name, version, description, download_url, file_name, category, platform, published, downloadable, license_key, rar_password, created_at, updated_at FROM fivem_files ORDER BY updated_at DESC, id DESC").all();
+    const result = await db.prepare("SELECT id, name, version, description, download_url, file_name, category, platform, published, downloadable, license_key, rar_password, download_count, created_at, updated_at FROM fivem_files ORDER BY updated_at DESC, id DESC").all();
     return json({ files: result.results || [] });
   } catch (error) {
     return json({ error: String(error?.message || "Failed to load FiveM files").slice(0, 300) }, 500);
