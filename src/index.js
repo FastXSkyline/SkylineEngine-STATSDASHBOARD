@@ -476,8 +476,26 @@ function legacyStats(row) {
 }
 
 async function buildStats(db, days) {
-  const since = `-${days} days`;
   const hourSince = `-${days * 24} hours`;
+
+  // Keep the dashboard alive even when an optional telemetry column is
+  // missing from an older D1 schema. One failed analytics query must not
+  // blank the entire home page.
+  const safeAll = async (statement) => {
+    try {
+      return await statement.all();
+    } catch (_) {
+      return { results: [] };
+    }
+  };
+
+  const safeFirst = async (statement) => {
+    try {
+      return await statement.first();
+    } catch (_) {
+      return null;
+    }
+  };
 
   const [
     totals,
@@ -489,52 +507,54 @@ async function buildStats(db, days) {
     newSeriesRows,
     platformRows,
     versionRows,
-    hardwareRows,
+    hardwareRow,
     cpuRows,
     gpuRows,
     recentRows,
     userRows
-  ] = await db.batch([
-    db.prepare(
+  ] = await Promise.all([
+    safeFirst(db.prepare(
       "SELECT COUNT(*) AS launches, COUNT(DISTINCT user_id) AS users, MAX(created_at) AS last_launch_at FROM launches"
-    ),
-    db.prepare(
+    )),
+    safeFirst(db.prepare(
       "SELECT COUNT(*) AS launches, COUNT(DISTINCT user_id) AS users FROM launches WHERE date(created_at) = date('now')"
-    ),
-    db.prepare(
+    )),
+    safeFirst(db.prepare(
       "SELECT COUNT(*) AS launches, COUNT(DISTINCT user_id) AS users FROM launches WHERE created_at >= datetime('now','-7 days')"
-    ),
-    db.prepare(
+    )),
+    safeFirst(db.prepare(
       `SELECT COUNT(*) AS users FROM
          (SELECT user_id, MIN(created_at) AS first_at FROM launches WHERE created_at IS NOT NULL GROUP BY user_id)
        WHERE date(first_at) = date('now')`
-    ),
-    db.prepare(
+    )),
+    safeFirst(db.prepare(
       `SELECT COUNT(*) AS users FROM
          (SELECT user_id, MIN(created_at) AS first_at FROM launches WHERE created_at IS NOT NULL GROUP BY user_id)
        WHERE first_at >= datetime('now','-7 days')`
-    ),
-    db.prepare(
+    )),
+    safeAll(db.prepare(
       `SELECT date(created_at) AS day, strftime('%Y-%m-%dT%H:00:00', created_at) AS hour_bucket,
               COUNT(*) AS launches, COUNT(DISTINCT user_id) AS users
        FROM launches WHERE created_at >= datetime('now', ?)
        GROUP BY hour_bucket ORDER BY hour_bucket`
-    ).bind(hourSince),
-    db.prepare(
+    ).bind(hourSince)),
+    safeAll(db.prepare(
       `SELECT strftime('%Y-%m-%dT%H:00:00', first_at) AS hour_bucket, COUNT(*) AS users FROM
          (SELECT user_id, MIN(created_at) AS first_at FROM launches WHERE created_at IS NOT NULL GROUP BY user_id)
        WHERE first_at >= datetime('now', ?)
        GROUP BY hour_bucket ORDER BY hour_bucket`
-    ).bind(hourSince),
-    db.prepare(
-      `SELECT COALESCE(NULLIF(os, ''), 'unknown') AS os, COALESCE(NULLIF(os_version, ''), '') AS os_version, COUNT(*) AS launches
+    ).bind(hourSince)),
+    safeAll(db.prepare(
+      `SELECT COALESCE(NULLIF(os, ''), 'unknown') AS os,
+              COALESCE(NULLIF(os_version, ''), '') AS os_version,
+              COUNT(*) AS launches
        FROM launches GROUP BY os, os_version ORDER BY launches DESC LIMIT 6`
-    ),
-    db.prepare(
+    )),
+    safeAll(db.prepare(
       `SELECT COALESCE(app_version, 'unknown') AS version, COUNT(*) AS launches
        FROM launches GROUP BY app_version ORDER BY launches DESC LIMIT 5`
-    ),
-    db.prepare(
+    )),
+    safeFirst(db.prepare(
       `SELECT
          (SELECT ROUND(AVG(cpu_cores), 1) FROM launches WHERE cpu_cores > 0) AS avg_cores,
          (SELECT ROUND(AVG(ram_gb), 1) FROM launches WHERE ram_gb > 0) AS avg_ram,
@@ -542,18 +562,18 @@ async function buildStats(db, days) {
          (SELECT COUNT(*) FROM launches WHERE cpu_cores > 0) AS samples,
          (SELECT screen_w || 'x' || screen_h FROM launches WHERE screen_w > 0
           GROUP BY screen_w, screen_h ORDER BY COUNT(*) DESC LIMIT 1) AS common_screen`
-    ),
-    db.prepare(
+    )),
+    safeAll(db.prepare(
       `SELECT COALESCE(NULLIF(cpu_model, ''), 'Unknown CPU') AS model, COUNT(*) AS launches
        FROM launches WHERE cpu_model IS NOT NULL AND cpu_model <> ''
        GROUP BY cpu_model ORDER BY launches DESC LIMIT 5`
-    ),
-    db.prepare(
+    )),
+    safeAll(db.prepare(
       `SELECT COALESCE(NULLIF(gpu_model, ''), 'Unknown GPU') AS model, COUNT(*) AS launches
        FROM launches WHERE gpu_model IS NOT NULL AND gpu_model <> ''
        GROUP BY gpu_model ORDER BY launches DESC LIMIT 5`
-    ),
-    db.prepare(
+    )),
+    safeAll(db.prepare(
       `SELECT l.user_id AS user_id,
               (SELECT l3.user_name FROM launches l3 WHERE l3.user_id = l.user_id AND l3.user_name IS NOT NULL ORDER BY l3.created_at DESC LIMIT 1) AS user_name,
               l.app_version AS app_version,
@@ -570,8 +590,8 @@ async function buildStats(db, days) {
        WHERE l.created_at IS NOT NULL
        ORDER BY l.created_at DESC
        LIMIT 1000`
-    ),
-    db.prepare(
+    )),
+    safeAll(db.prepare(
       `SELECT user_id,
               (SELECT l3.user_name FROM launches l3 WHERE l3.user_id = l.user_id AND l3.user_name IS NOT NULL ORDER BY l3.created_at DESC LIMIT 1) AS user_name,
               COUNT(*) AS launches,
@@ -591,26 +611,23 @@ async function buildStats(db, days) {
        GROUP BY user_id
        ORDER BY last_at DESC
        LIMIT 20`
-    )
+    ))
   ]);
 
-  const launches = number(totals.results?.[0]?.launches);
-  const users = number(totals.results?.[0]?.users);
+  const totalsRow = totals || {};
+  const launches = number(totalsRow.launches);
+  const users = number(totalsRow.users);
 
   return {
-    /* legacy keys kept for compatibility */
     launches,
     users,
-
-    launchesToday: number(today.results?.[0]?.launches),
-    usersToday: number(today.results?.[0]?.users),
-    newUsersToday: number(newToday.results?.[0]?.users),
-
-    launches7d: number(week.results?.[0]?.launches),
-    activeUsers7d: number(week.results?.[0]?.users),
-    newUsers7d: number(newWeek.results?.[0]?.users),
-
-    lastLaunchAt: totals.results?.[0]?.last_launch_at || null,
+    launchesToday: number(today?.launches),
+    usersToday: number(today?.users),
+    newUsersToday: number(newToday?.users),
+    launches7d: number(week?.launches),
+    activeUsers7d: number(week?.users),
+    newUsers7d: number(newWeek?.users),
+    lastLaunchAt: totalsRow.last_launch_at || null,
     avgLaunchesPerUser: users > 0 ? round(launches / users, 2) : 0,
     days,
 
@@ -619,11 +636,11 @@ async function buildStats(db, days) {
     versions: buildVersions(versionRows.results || [], launches),
 
     hardware: {
-      avgCores: number(hardwareRows.results?.[0]?.avg_cores) || null,
-      avgRamGb: number(hardwareRows.results?.[0]?.avg_ram) || null,
-      commonScreen: hardwareRows.results?.[0]?.common_screen || null,
-      avgRamUsedPct: number(hardwareRows.results?.[0]?.avg_ram_used_pct) || null,
-      samples: number(hardwareRows.results?.[0]?.samples),
+      avgCores: number(hardwareRow?.avg_cores) || null,
+      avgRamGb: number(hardwareRow?.avg_ram) || null,
+      commonScreen: hardwareRow?.common_screen || null,
+      avgRamUsedPct: number(hardwareRow?.avg_ram_used_pct) || null,
+      samples: number(hardwareRow?.samples),
       cpuModels: (cpuRows.results || []).map((r) => ({ model: r.model, launches: number(r.launches) })),
       gpuModels: (gpuRows.results || []).map((r) => ({ model: r.model, launches: number(r.launches) }))
     },
@@ -631,8 +648,8 @@ async function buildStats(db, days) {
     recent: (recentRows.results || []).map((row) => ({
       userId: row.user_id,
       userName: row.user_name || "",
-      appVersion: row.app_version,
-      os: row.os,
+      appVersion: row.app_version || "unknown",
+      os: row.os || "unknown",
       osVersion: row.os_version || "",
       createdAt: row.created_at,
       cpuModel: row.cpu_model || "",
