@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 const state = {
   days: 1,
   scope: "launches", // "launches" | "new"
-  mode: "flat", // "flat" | "grouped"
+  mode: "grouped", // "flat" | "grouped"
   series: [],
   ready: false
 };
