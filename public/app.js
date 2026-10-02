@@ -963,6 +963,7 @@ function fivemSetForm(file = null) {
   $("fivemCategory").value = file?.category || "Application";
   $("fivemPlatform").value = file?.platform || "Windows";
   $("fivemPublished").checked = Number(file?.published) === 1;
+  $("fivemDownloadable").checked = file ? Number(file.downloadable) !== 0 : true;
   $("fivemFormError").hidden = true;
 }
 
@@ -991,6 +992,7 @@ function renderFiveMFiles() {
   empty.hidden = files.length !== 0;
   list.innerHTML = files.map(file => {
     const status = Number(file.published) === 1;
+    const downloadable = Number(file.downloadable) !== 0;
     return '<article class="fivem-file"><div class="fivem-file-main"><div class="fivem-file-top"><span class="fivem-file-name">' + escapeHtml(file.name || "Untitled file") + '</span><span class="fivem-file-version">v' + escapeHtml(file.version || "—") + '</span></div><p class="fivem-file-desc">' + escapeHtml(file.description || "No description added.") + '</p><div class="fivem-file-meta"><span>' + escapeHtml(file.file_name || "No file name") + '</span><span>' + escapeHtml(file.category || "Application") + '</span><span>' + escapeHtml(file.platform || "Windows") + '</span><span class="fivem-status ' + (status ? "published" : "draft") + '">' + (status ? "Published" : "Draft") + '</span></div></div><div class="fivem-file-actions"><button class="fivem-action" data-fivem-action="edit" data-id="' + file.id + '">Edit</button><button class="fivem-action" data-fivem-action="publish" data-id="' + file.id + '">' + (status ? "Unpublish" : "Publish") + '</button><button class="fivem-action danger" data-fivem-action="delete" data-id="' + file.id + '">Delete</button></div></article>';
   }).join("");
 }
@@ -1012,7 +1014,7 @@ async function saveFiveMFile(event) {
   event.preventDefault();
   const errorBox = $("fivemFormError");
   const save = $("fivemSave");
-  const payload = { name: $("fivemName").value.trim(), version: $("fivemVersion").value.trim(), description: $("fivemDescription").value.trim(), download_url: $("fivemUrl").value.trim(), file_name: $("fivemFileName").value.trim(), category: $("fivemCategory").value.trim(), platform: $("fivemPlatform").value.trim(), published: $("fivemPublished").checked };
+  const payload = { name: $("fivemName").value.trim(), version: $("fivemVersion").value.trim(), description: $("fivemDescription").value.trim(), download_url: $("fivemUrl").value.trim(), file_name: $("fivemFileName").value.trim(), category: $("fivemCategory").value.trim(), platform: $("fivemPlatform").value.trim(), published: $("fivemPublished").checked, downloadable: $("fivemDownloadable").checked };
   if (!payload.name) { errorBox.textContent = "File name is required."; errorBox.hidden = false; return; }
   save.disabled = true;
   save.textContent = "Saving…";
