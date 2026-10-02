@@ -6,12 +6,17 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders() });
     }
 
-    if (url.pathname === "/api/auth/send" && request.method === "POST") return sendLoginCode(request, env);
-    if (url.pathname === "/api/auth/verify" && request.method === "POST") return verifyLoginCode(request, env);
+    if (url.pathname === "/api/auth/login" && request.method === "POST") return keyAuthLogin(request, env);
     if (url.pathname === "/api/auth/logout" && request.method === "POST") return logout(request, env);
     if (url.pathname === "/api/auth/session" && request.method === "GET") return json({ authenticated: await isAuthenticated(request, env) });
 
-  // Authentication temporarily disabled. The dashboard is publicly accessible while the login system is being repaired.
+    if (url.pathname === "/" && request.method === "GET" && !(await isAuthenticated(request, env))) {
+      return env.ASSETS.fetch(new Request(new URL("/login.html", request.url), request));
+    }
+
+    if (url.pathname === "/api/stats" && request.method === "GET" && !(await isAuthenticated(request, env))) {
+      return json({ error: "Authentication required." }, 401);
+    }
 
     if ((url.pathname === "/launch" || url.pathname === "/launchstats" || url.pathname === "/api/launch" || url.pathname === "/api/launchstats" || url.pathname === "/stats/launch") && request.method === "POST") {
       try {
@@ -179,8 +184,73 @@ async function isAuthenticated(request, env) {
   await ensureAuthTables(env.DB);
   const tokenHash = await sha256(token);
   const session = await env.DB.prepare("SELECT email, expires_at FROM admin_sessions WHERE token_hash = ?").bind(tokenHash).first();
-  if (!session || session.expires_at < Math.floor(Date.now() / 1000) || !ADMIN_EMAILS.has(session.email)) return false;
-  return true;
+  if (!session || session.expires_at < Math.floor(Date.now() / 1000)) return false;
+  return String(session.email || "").startsWith("keyauth:");
+}
+
+async function keyAuthLogin(request, env) {
+  try {
+    const body = await request.json();
+    const username = String(body.username || "").trim();
+    const password = String(body.password || "");
+
+    if (!username || !password || username.length > 128 || password.length > 256) {
+      return json({ error: "Username and password are required." }, 400);
+    }
+
+    const initParams = new URLSearchParams({
+      type: "init",
+      ver: String(env.KEYAUTH_VERSION || "1.0"),
+      name: String(env.KEYAUTH_NAME || "DashBoardStats"),
+      ownerid: String(env.KEYAUTH_OWNERID || "2rnJ2XxHhk")
+    });
+
+    const initResponse = await fetch("https://keyauth.win/api/1.3/?" + initParams.toString());
+    const initData = await initResponse.json().catch(() => null);
+
+    if (!initResponse.ok || !initData?.success || !initData?.sessionid) {
+      return json({ error: initData?.message || "KeyAuth initialization failed." }, 502);
+    }
+
+    const loginParams = new URLSearchParams({
+      type: "login",
+      username,
+      pass: password,
+      sessionid: String(initData.sessionid),
+      name: String(env.KEYAUTH_NAME || "DashBoardStats"),
+      ownerid: String(env.KEYAUTH_OWNERID || "2rnJ2XxHhk")
+    });
+
+    const loginResponse = await fetch("https://keyauth.win/api/1.3/?" + loginParams.toString());
+    const loginData = await loginResponse.json().catch(() => null);
+
+    if (!loginResponse.ok || !loginData?.success) {
+      return json({ error: loginData?.message || "Invalid KeyAuth username or password." }, 401);
+    }
+
+    await ensureAuthTables(env.DB);
+
+    const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
+    const token = Array.from(tokenBytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    const expiresAt = Math.floor(Date.now() / 1000) + 7 * 86400;
+
+    await env.DB.prepare(
+      "INSERT INTO admin_sessions (token_hash, email, expires_at) VALUES (?, ?, ?)"
+    ).bind(await sha256(token), "keyauth:" + username, expiresAt).run();
+
+    return new Response(JSON.stringify({
+      success: true,
+      username: loginData?.info?.username || username
+    }), {
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": "skyline_admin_session=" + token + "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=" + (7 * 86400),
+        ...corsHeaders()
+      }
+    });
+  } catch (error) {
+    return json({ error: "Could not connect to KeyAuth." }, 502);
+  }
 }
 
 async function sendLoginCode(request, env) {
