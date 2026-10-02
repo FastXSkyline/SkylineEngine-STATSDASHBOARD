@@ -1186,3 +1186,13 @@ footer span:last-child{display:flex;align-items:center;gap:8px}
 .machine-model-list>span b{flex:none;color:#777a85;font-weight:600}
 @media(max-width:1180px){.stat-trio{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.machine-models{grid-template-columns:1fr}}
+
+
+/* Smooth entry after authenticated login */
+body{
+  animation:dashboard-enter .62s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes dashboard-enter{
+  from{opacity:0;transform:translateY(8px) scale(.992);filter:blur(4px)}
+  to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
+}
