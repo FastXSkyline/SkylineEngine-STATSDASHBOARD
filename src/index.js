@@ -927,7 +927,7 @@ async function createFiveMFile(request, db) {
     const payload = fivemPayload(body);
     if (payload.error) return json({ error: payload.error }, 400);
     await ensureFiveMSchema(db);
-    const result = await db.prepare("INSERT INTO fivem_files (name, version, description, download_url, file_name, category, platform, published, downloadable, license_key, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%d %H:%M:%S','now'), strftime('%Y-%m-%d %H:%M:%S','now'))").bind(payload.name, payload.version, payload.description, payload.download_url, payload.file_name, payload.category, payload.platform, payload.published, payload.downloadable, payload.license_key, payload.rar_password).run();
+    const result = await db.prepare("INSERT INTO fivem_files (name, version, description, download_url, file_name, category, platform, published, downloadable, license_key, rar_password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%d %H:%M:%S','now'), strftime('%Y-%m-%d %H:%M:%S','now'))").bind(payload.name, payload.version, payload.description, payload.download_url, payload.file_name, payload.category, payload.platform, payload.published, payload.downloadable, payload.license_key, payload.rar_password).run();
     const file = await db.prepare("SELECT * FROM fivem_files WHERE id = ?").bind(result.meta?.last_row_id).first();
     return json({ success: true, file });
   } catch (error) {
