@@ -21,13 +21,8 @@ const PLATFORM_COLORS = [
   "rgba(255,255,255,.09)"
 ];
 
-async function openTelemetrySearch() {
-  const query = window.prompt("Search users, IDs, sessions, versions, CPUs, GPUs, or operating systems:");
-  if (query === null) return;
-  const q = query.trim();
-  if (!q) return;
-
-  window.location.href = "/search.html?q=" + encodeURIComponent(q);
+function openTelemetrySearch() {
+  window.location.href = "/search.html";
 }
 
 document.addEventListener("DOMContentLoaded", () => {
