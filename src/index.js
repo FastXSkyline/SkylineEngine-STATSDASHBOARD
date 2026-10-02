@@ -95,6 +95,26 @@ export default {
       }
     }
 
+    if (url.pathname === "/api/fivem/files" && request.method === "GET") {
+      if (!(await isAuthenticated(request, env))) return json({ error: "Authentication required." }, 401);
+      return listFiveMFiles(env.DB);
+    }
+
+    if (url.pathname === "/api/fivem/files" && request.method === "POST") {
+      if (!(await isAuthenticated(request, env))) return json({ error: "Authentication required." }, 401);
+      return createFiveMFile(request, env.DB);
+    }
+
+    if (url.pathname.startsWith("/api/fivem/files/") && request.method === "PUT") {
+      if (!(await isAuthenticated(request, env))) return json({ error: "Authentication required." }, 401);
+      return updateFiveMFile(request, env.DB, url.pathname.split("/").pop());
+    }
+
+    if (url.pathname.startsWith("/api/fivem/files/") && request.method === "DELETE") {
+      if (!(await isAuthenticated(request, env))) return json({ error: "Authentication required." }, 401);
+      return deleteFiveMFile(env.DB, url.pathname.split("/").pop());
+    }
+
     if (url.pathname === "/api/stats" && request.method === "GET") {
       try {
         const days = clampInt(url.searchParams.get("days"), 14, 1, 90);
@@ -837,6 +857,77 @@ function corsHeaders() {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type"
   };
+}
+
+async function listFiveMFiles(db) {
+  try {
+    await ensureFiveMSchema(db);
+    const result = await db.prepare("SELECT id, name, version, description, download_url, file_name, category, platform, published, created_at, updated_at FROM fivem_files ORDER BY updated_at DESC, id DESC").all();
+    return json({ files: result.results || [] });
+  } catch (error) {
+    return json({ error: String(error?.message || "Failed to load FiveM files").slice(0, 300) }, 500);
+  }
+}
+
+function fivemPayload(body) {
+  const source = body && typeof body === "object" ? body : {};
+  const payload = {
+    name: text(source.name, 120, ""),
+    version: text(source.version, 64, ""),
+    description: text(source.description, 2000, ""),
+    download_url: text(source.download_url ?? source.downloadUrl, 1000, ""),
+    file_name: text(source.file_name ?? source.fileName, 255, ""),
+    category: text(source.category, 64, "Application"),
+    platform: text(source.platform, 32, "Windows"),
+    published: source.published ? 1 : 0
+  };
+  if (!payload.name) return { error: "File name is required." };
+  if (payload.download_url && !/^https?:\\/\\//i.test(payload.download_url)) return { error: "Download URL must start with http:// or https://." };
+  return payload;
+}
+
+async function createFiveMFile(request, db) {
+  try {
+    const body = await request.json();
+    const payload = fivemPayload(body);
+    if (payload.error) return json({ error: payload.error }, 400);
+    await ensureFiveMSchema(db);
+    const result = await db.prepare("INSERT INTO fivem_files (name, version, description, download_url, file_name, category, platform, published, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%d %H:%M:%S','now'), strftime('%Y-%m-%d %H:%M:%S','now'))").bind(payload.name, payload.version, payload.description, payload.download_url, payload.file_name, payload.category, payload.platform, payload.published).run();
+    const file = await db.prepare("SELECT * FROM fivem_files WHERE id = ?").bind(result.meta?.last_row_id).first();
+    return json({ success: true, file });
+  } catch (error) {
+    return json({ error: String(error?.message || "Failed to create file").slice(0, 300) }, 500);
+  }
+}
+
+async function updateFiveMFile(request, db, id) {
+  try {
+    const fileId = Number.parseInt(id, 10);
+    if (!Number.isInteger(fileId) || fileId < 1) return json({ error: "Invalid file id." }, 400);
+    const existing = await db.prepare("SELECT id FROM fivem_files WHERE id = ?").bind(fileId).first();
+    if (!existing) return json({ error: "File not found." }, 404);
+    const body = await request.json();
+    const payload = fivemPayload(body);
+    if (payload.error) return json({ error: payload.error }, 400);
+    await ensureFiveMSchema(db);
+    await db.prepare("UPDATE fivem_files SET name=?, version=?, description=?, download_url=?, file_name=?, category=?, platform=?, published=?, updated_at=strftime('%Y-%m-%d %H:%M:%S','now') WHERE id=?").bind(payload.name, payload.version, payload.description, payload.download_url, payload.file_name, payload.category, payload.platform, payload.published, fileId).run();
+    const file = await db.prepare("SELECT * FROM fivem_files WHERE id = ?").bind(fileId).first();
+    return json({ success: true, file });
+  } catch (error) {
+    return json({ error: String(error?.message || "Failed to update file").slice(0, 300) }, 500);
+  }
+}
+
+async function deleteFiveMFile(db, id) {
+  try {
+    const fileId = Number.parseInt(id, 10);
+    if (!Number.isInteger(fileId) || fileId < 1) return json({ error: "Invalid file id." }, 400);
+    const result = await db.prepare("DELETE FROM fivem_files WHERE id = ?").bind(fileId).run();
+    if (!result.meta?.changes) return json({ error: "File not found." }, 404);
+    return json({ success: true });
+  } catch (error) {
+    return json({ error: String(error?.message || "Failed to delete file").slice(0, 300) }, 500);
+  }
 }
 
 function json(data, status = 200) {
