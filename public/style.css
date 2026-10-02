@@ -1207,3 +1207,152 @@ body{
 .fivem-list{display:grid;gap:10px;padding-top:12px}.fivem-list:empty{display:none}.fivem-file{border:1px solid rgba(255,255,255,.07);border-radius:12px;background:linear-gradient(145deg,rgba(25,27,37,.94),rgba(12,14,21,.98));padding:15px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center}.fivem-file:hover{border-color:rgba(255,255,255,.13)}.fivem-file-main{min-width:0}.fivem-file-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.fivem-file-name{font-size:14px;font-weight:650;color:#f5f5f7}.fivem-file-version{font-size:10px;color:#9295a0;padding:3px 7px;border:1px solid rgba(255,255,255,.07);border-radius:999px}.fivem-download-count{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border:1px solid rgba(255,45,45,.16);border-radius:999px;background:rgba(255,45,45,.035);color:#9f8181;font-size:9.5px;letter-spacing:.01em}.fivem-download-count svg{width:11px;height:11px;fill:none;stroke:#ff5a5a;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.fivem-download-count b{color:#f0dada;font-weight:700}.fivem-status.download-enabled{color:#76d69a}.fivem-status.download-disabled{color:#999ca7}.fivem-file-desc{margin:7px 0 0;color:#858894;font-size:11.5px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}.fivem-file-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;color:#666a76;font-size:10px}.fivem-file-meta span{padding:3px 7px;border-radius:6px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.045)}.fivem-status{font-weight:650}.fivem-status.published{color:#76d69a}.fivem-status.draft{color:#999ca7}.fivem-file-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.fivem-action{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);color:#c9cbd2;border-radius:7px;padding:7px 9px;font-size:10.5px;font-weight:600;cursor:pointer}.fivem-action:hover{border-color:rgba(255,45,45,.3);color:#fff;background:rgba(255,45,45,.045)}.fivem-action.danger:hover{border-color:rgba(255,80,80,.4);color:#ff8f8f}.fivem-modal-backdrop{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.68);backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px}.fivem-modal-backdrop[hidden]{display:none}.fivem-modal{width:min(650px,100%);max-height:min(760px,calc(100vh - 40px));overflow:auto;border:1px solid rgba(255,255,255,.1);border-radius:15px;background:linear-gradient(145deg,#1a1c26,#0d0f16);box-shadow:0 24px 80px rgba(0,0,0,.55);padding:20px}.fivem-modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}.fivem-modal-head h3{margin:4px 0 0;font-size:19px;color:#fff}.fivem-modal-close{width:30px;height:30px;border:1px solid rgba(255,255,255,.07);border-radius:8px;background:rgba(255,255,255,.03);color:#aaa;cursor:pointer;font-size:20px}.fivem-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.fivem-form-grid label{display:flex;flex-direction:column;gap:6px;color:#9295a0;font-size:10px;text-transform:uppercase;letter-spacing:.08em}.fivem-form-grid label.wide{grid-column:1/-1}.fivem-form-grid input,.fivem-form-grid textarea{width:100%;box-sizing:border-box;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(0,0,0,.18);color:#eee;padding:10px;font:inherit;font-size:12px;outline:none;resize:vertical}.fivem-form-grid input:focus,.fivem-form-grid textarea:focus{border-color:rgba(255,45,45,.42);box-shadow:0 0 0 3px rgba(255,45,45,.05)}.publish-field{justify-content:center}.publish-field>span{margin-bottom:3px}.publish-field input{width:18px;height:18px;accent-color:var(--accent);align-self:flex-start}.fivem-form-error{margin-top:12px;padding:9px 11px;border-radius:8px;border:1px solid rgba(255,45,45,.25);background:rgba(255,45,45,.07);color:#ff9696;font-size:11px}.fivem-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.fivem-secondary-btn{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);color:#bfc1c9;border-radius:8px;padding:10px 14px;font-weight:600;cursor:pointer}.fivem-secondary-btn:hover{background:rgba(255,255,255,.05);color:#fff}@media(max-width:700px){.fivem-search{width:100%}.fivem-file{grid-template-columns:1fr}.fivem-file-actions{justify-content:flex-start}.fivem-form-grid{grid-template-columns:1fr}.fivem-form-grid label.wide{grid-column:auto}}
 
 .fivem-loading{border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:32px;text-align:center;color:#777b87;font-size:11px;background:rgba(255,255,255,.012)}body.fivem-modal-open{overflow:hidden}
+
+/* FiveM download details modal */
+.fivem-download-count{
+  appearance:none;
+  font:inherit;
+  cursor:pointer;
+}
+.fivem-download-count:hover{
+  border-color:rgba(255,45,45,.34);
+  background:rgba(255,45,45,.07);
+  box-shadow:0 0 14px rgba(255,45,45,.08);
+  transform:translateY(-1px);
+}
+.fivem-download-modal-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:120;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:rgba(4,4,5,.58);
+  backdrop-filter:blur(11px);
+  -webkit-backdrop-filter:blur(11px);
+}
+.fivem-download-modal-backdrop[hidden]{display:none}
+.fivem-download-modal{
+  position:relative;
+  width:min(560px,100%);
+  border:1px solid rgba(255,45,45,.18);
+  border-radius:16px;
+  background:
+    radial-gradient(420px 180px at 0% 0%,rgba(255,45,45,.10),transparent 68%),
+    linear-gradient(145deg,#1b1b1f 0%,#131315 58%,#101012 100%);
+  box-shadow:
+    0 30px 90px rgba(0,0,0,.58),
+    0 0 45px rgba(255,45,45,.07),
+    inset 0 1px 0 rgba(255,255,255,.045);
+  padding:20px;
+  animation:fivem-download-modal-in 220ms cubic-bezier(.22,1,.36,1);
+}
+@keyframes fivem-download-modal-in{
+  from{opacity:0;transform:translateY(10px) scale(.985)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.fivem-download-modal:before{
+  content:"";
+  position:absolute;
+  top:0;left:22px;width:72px;height:2px;
+  border-radius:0 0 4px 4px;
+  background:#ff2d2d;
+  box-shadow:0 0 16px rgba(255,45,45,.38);
+}
+.fivem-download-modal-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+  margin-bottom:18px;
+}
+.fivem-download-modal-head h3{
+  margin:4px 0 0;
+  color:#fff;
+  font-size:19px;
+}
+.fivem-download-summary{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  padding:13px;
+  border:1px solid rgba(255,45,45,.13);
+  border-radius:11px;
+  background:rgba(255,45,45,.035);
+}
+.fivem-download-summary-icon{
+  width:38px;height:38px;
+  display:grid;place-items:center;
+  border:1px solid rgba(255,45,45,.20);
+  border-radius:10px;
+  background:rgba(255,45,45,.075);
+  color:#ff4545;
+}
+.fivem-download-summary span,.fivem-download-detail-grid span{
+  display:block;
+  color:#777982;
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.10em;
+}
+.fivem-download-summary strong{
+  display:block;
+  margin-top:3px;
+  color:#f3f3f5;
+  font-size:12.5px;
+}
+.fivem-download-summary small{
+  display:block;
+  margin-top:2px;
+  color:#686a73;
+  font-size:10px;
+}
+.fivem-download-total{
+  min-width:110px;
+  padding-left:14px;
+  border-left:1px solid rgba(255,45,45,.12);
+  text-align:right;
+}
+.fivem-download-total strong{
+  margin-top:2px;
+  color:#ff4a4a;
+  font-size:24px;
+  line-height:1;
+  text-shadow:0 0 18px rgba(255,45,45,.20);
+}
+.fivem-download-detail-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+  margin-top:10px;
+}
+.fivem-download-detail-grid>div{
+  min-width:0;
+  padding:11px 12px;
+  border:1px solid rgba(255,255,255,.055);
+  border-radius:9px;
+  background:rgba(255,255,255,.018);
+}
+.fivem-download-detail-grid>div.wide{grid-column:1/-1}
+.fivem-download-detail-grid strong{
+  display:block;
+  margin-top:5px;
+  color:#dfe0e4;
+  font-size:11px;
+  font-weight:600;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.fivem-download-detail-grid strong.is-available{color:#76d69a}
+.fivem-download-detail-grid strong.is-muted{color:#9b9da5}
+body.fivem-download-modal-open{overflow:hidden}
+@media(max-width:560px){
+  .fivem-download-modal{padding:17px}
+  .fivem-download-summary{grid-template-columns:auto minmax(0,1fr)}
+  .fivem-download-total{grid-column:1/-1;border-left:0;border-top:1px solid rgba(255,45,45,.10);padding:10px 0 0;text-align:left}
+  .fivem-download-total strong{font-size:21px}
+  .fivem-download-detail-grid{grid-template-columns:1fr}
+  .fivem-download-detail-grid>div.wide{grid-column:auto}
+}
