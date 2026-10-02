@@ -1,6 +1,5 @@
 const loginForm = document.getElementById("loginForm");
-const usernameInput = document.getElementById("username");
-const passwordInput = document.getElementById("password");
+const licenseKeyInput = document.getElementById("licenseKey");
 const message = document.getElementById("message");
 const loginBtn = document.getElementById("loginBtn");
 
@@ -36,8 +35,8 @@ loginForm.addEventListener("submit", async (event) => {
         "X-Skyline-Device": getDeviceId()
       },
       body: JSON.stringify({
-        username: usernameInput.value.trim(),
-        password: passwordInput.value
+        username: licenseKeyInput.value.trim(),
+        password: licenseKeyInput.value.trim()
       })
     });
 
@@ -56,4 +55,4 @@ loginForm.addEventListener("submit", async (event) => {
   }
 });
 
-usernameInput.focus();
+licenseKeyInput.focus();
