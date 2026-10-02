@@ -5,6 +5,8 @@ const state = {
   days: 1,
   scope: "launches", // "launches" | "new"
   mode: "grouped", // "flat" | "grouped"
+  recentPage: 1,
+  recentTotalUsers: 0,
   series: [],
   ready: false
 };
@@ -693,7 +695,9 @@ function applyStats(data) {
   renderPlatforms(data.platforms || [], launches);
   renderVersions(data.versions || []);
   renderHardware(data.hardware || {});
-  renderRecent(data.recent || [], state.mode);
+  state.recentTotalUsers = Number(data.recentTotalUsers || 0);
+    state.recentPage = Number(data.recentPage || state.recentPage || 1);
+    renderRecent(data.recent || [], state.mode);
   renderUserDetails(data.userDetails || [], users, degraded);
 
   if (degraded) {
@@ -737,7 +741,7 @@ async function loadStats(options = {}) {
   }
 
   try {
-    const response = await fetch(`${API_URL}?days=${state.days}&_=${Date.now()}`, {
+    const response = await fetch(`${API_URL}?days=${state.days}&recentMode=${state.mode}&recentPage=${state.recentPage}&_=${Date.now()}`, {
       cache: "no-store",
       credentials: "same-origin",
       headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
@@ -845,6 +849,7 @@ setupDropdown("scopeDropdown", (data) => {
 
 setupDropdown("modeDropdown", (data) => {
   state.mode = data.mode === "grouped" ? "grouped" : "flat";
+  state.recentPage = 1;
   $("modeLabel").textContent = state.mode === "grouped" ? "Group by user" : "Flat list";
   loadStats();
 });
@@ -1108,3 +1113,15 @@ function setupFiveMManager() {
 }
 document.addEventListener("DOMContentLoaded", setupFiveMManager);
 
+
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-recent-page]");
+  if (!button || button.disabled) return;
+  const page = Number.parseInt(button.dataset.recentPage, 10);
+  if (!Number.isInteger(page) || page < 1) return;
+  const pages = Math.max(1, Math.ceil(state.recentTotalUsers / 25));
+  if (page > pages || page === state.recentPage) return;
+  state.recentPage = page;
+  loadStats();
+});
