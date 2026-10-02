@@ -917,3 +917,26 @@ setInterval(() => loadStats({ silent: true }), 5000);
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) loadStats();
 });
+
+
+/* FiveM admin view — presentation only; data wiring comes in a later step. */
+function setupFiveMView(){
+  const nav=document.getElementById("fivemNav");
+  const section=document.getElementById("fivem");
+  if(!nav||!section)return;
+  const dashboardSelectors=[".hero",".tabs",".stats-grid",".analytics",".dist-grid",".table-section","footer"];
+  const toggle=(show)=>{
+    section.hidden=!show;
+    dashboardSelectors.forEach((selector)=>document.querySelectorAll(selector).forEach((el)=>el.classList.toggle("fivem-view-hidden",show)));
+    document.querySelectorAll(".nav-link").forEach((link)=>link.classList.remove("active"));
+    nav.classList.toggle("active",show);
+    if(show) window.scrollTo({top:0,behavior:"smooth"});
+  };
+  nav.addEventListener("click",(event)=>{event.preventDefault();toggle(true);});
+  document.querySelectorAll('a[href="#fivem"]').forEach((link)=>link.addEventListener("click",(event)=>{event.preventDefault();toggle(true);}));
+  document.querySelectorAll('a[href="/"]').forEach((link)=>link.addEventListener("click",()=>toggle(false)));
+  const create=()=>{window.alert("FiveM file creation UI will be enabled in the next step.");};
+  document.getElementById("fivemCreateBtn")?.addEventListener("click",create);
+  document.getElementById("fivemEmptyCreate")?.addEventListener("click",create);
+}
+document.addEventListener("DOMContentLoaded",setupFiveMView);
