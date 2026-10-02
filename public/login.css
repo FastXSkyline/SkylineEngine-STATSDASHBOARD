@@ -496,3 +496,85 @@ button:disabled{opacity:.6;cursor:wait;transform:none}
   .login-footer{left:16px;right:16px;bottom:13px}
   .login-footer span:first-child{display:none}
 }
+
+
+/* Page transition / futuristic neutral loader */
+.page-transition-loader{
+  position:fixed;
+  inset:0;
+  z-index:100;
+  display:grid;
+  place-items:center;
+  align-content:center;
+  gap:18px;
+  background:
+    radial-gradient(circle at center,rgba(75,82,105,.16),transparent 34%),
+    rgba(6,8,13,.97);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity .48s ease,visibility .48s ease;
+}
+.page-transition-loader.is-visible{
+  opacity:1;
+  visibility:visible;
+}
+.loader-wrapper{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:180px;
+  height:180px;
+  font-family:Inter,sans-serif;
+  font-size:1.2em;
+  font-weight:300;
+  color:white;
+  border-radius:50%;
+  background:transparent;
+  user-select:none;
+}
+.loader{
+  position:absolute;
+  inset:0;
+  width:100%;
+  aspect-ratio:1/1;
+  border-radius:50%;
+  background:transparent;
+  animation:loader-rotate 2s linear infinite;
+  z-index:0;
+}
+@keyframes loader-rotate{
+  0%{transform:rotate(90deg);box-shadow:0 10px 20px 0 #fff inset,0 20px 30px 0 #aeb6c7 inset,0 60px 60px 0 #46536c inset}
+  50%{transform:rotate(270deg);box-shadow:0 10px 20px 0 #fff inset,0 20px 10px 0 #d5d9e2 inset,0 40px 60px 0 #252c3c inset}
+  100%{transform:rotate(450deg);box-shadow:0 10px 20px 0 #fff inset,0 20px 30px 0 #aeb6c7 inset,0 60px 60px 0 #46536c inset}
+}
+.loader-letter{
+  display:inline-block;
+  opacity:.4;
+  transform:translateY(0);
+  animation:loader-letter-anim 2s infinite;
+  z-index:1;
+  border:0;
+}
+.loader-letter:nth-child(1){animation-delay:0s}
+.loader-letter:nth-child(2){animation-delay:.1s}
+.loader-letter:nth-child(3){animation-delay:.2s}
+.loader-letter:nth-child(4){animation-delay:.3s}
+.loader-letter:nth-child(5){animation-delay:.4s}
+.loader-letter:nth-child(6){animation-delay:.5s}
+.loader-letter:nth-child(7){animation-delay:.6s}
+@keyframes loader-letter-anim{
+  0%,100%{opacity:.4;transform:translateY(0)}
+  20%{opacity:1;transform:scale(1.15)}
+  40%{opacity:.7;transform:translateY(0)}
+}
+.loader-caption{
+  color:#858a96;
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+}
+.login-shell{transition:opacity .45s ease,transform .55s cubic-bezier(.22,1,.36,1),filter .45s ease}
+body.login-exit .login-shell{opacity:0;transform:scale(.985);filter:blur(5px)}
