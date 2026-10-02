@@ -1356,3 +1356,6 @@ body.fivem-download-modal-open{overflow:hidden}
   .fivem-download-detail-grid{grid-template-columns:1fr}
   .fivem-download-detail-grid>div.wide{grid-column:auto}
 }
+
+
+.recent-pagination{display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 0 2px}.recent-pagination button{min-width:32px;height:32px;padding:0 10px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(255,255,255,.025);color:#929298;font:600 10px inherit;cursor:pointer;transition:.18s ease}.recent-pagination button:hover:not(:disabled){color:#fff;border-color:rgba(255,45,45,.28);background:rgba(255,45,45,.08)}.recent-pagination button.active{color:#fff;border-color:rgba(255,45,45,.38);background:rgba(255,45,45,.14);box-shadow:0 0 14px rgba(255,45,45,.08)}.recent-pagination button:disabled{opacity:.38;cursor:default}
