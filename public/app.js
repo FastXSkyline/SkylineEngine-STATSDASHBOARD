@@ -1,4 +1,5 @@
-const API_URL = "/api/stats";\nconst $ = (id) => document.getElementById(id);
+const API_URL = "/api/stats";
+const $ = (id) => document.getElementById(id);
 
 const state = {
   days: 1,
