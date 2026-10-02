@@ -1175,3 +1175,14 @@ footer span:last-child{display:flex;align-items:center;gap:8px}
   color:#a4a7b0;
   background:rgba(255,255,255,.028);
 }
+
+/* Extended machine telemetry */
+.stat-trio{grid-template-columns:repeat(4,minmax(0,1fr))}
+.machine-models{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.045)}
+.machine-model-group{min-width:0}
+.machine-model-group>span{display:block;color:#70737e;font-size:9.5px;letter-spacing:.7px;text-transform:uppercase;margin-bottom:7px}
+.machine-model-list{display:grid;gap:5px}
+.machine-model-list>span{display:flex;justify-content:space-between;gap:8px;min-width:0;color:#bfc1c9;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.machine-model-list>span b{flex:none;color:#777a85;font-weight:600}
+@media(max-width:1180px){.stat-trio{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.machine-models{grid-template-columns:1fr}}
