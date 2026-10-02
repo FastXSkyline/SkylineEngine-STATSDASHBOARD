@@ -13,8 +13,12 @@ export default {
       return json({ authenticated });
     }
 
-    if (url.pathname === "/" && request.method === "GET" && !(await isAuthenticated(request, env))) {
-      return env.ASSETS.fetch(new Request(new URL("/login.html", request.url), request));
+    if (url.pathname === "/" && request.method === "GET") {
+      const authenticated = await isAuthenticated(request, env);
+      if (!authenticated) {
+        return env.ASSETS.fetch(new Request(new URL("/login.html", request.url), request));
+      }
+      await ensureFiveMSchema(env.DB);
     }
 
     if (url.pathname === "/api/stats" && request.method === "GET" && !(await isAuthenticated(request, env))) {
@@ -173,23 +177,6 @@ async function ensureAuthTables(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS keyauth_device_bindings (username TEXT PRIMARY KEY, device_hash TEXT NOT NULL, bound_at INTEGER NOT NULL)").run();
 }
 
-const FIVEM_SCHEMA_SQL = `
-CREATE TABLE IF NOT EXISTS fivem_files (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  version TEXT NOT NULL DEFAULT '',
-  description TEXT NOT NULL DEFAULT '',
-  download_url TEXT NOT NULL DEFAULT '',
-  file_name TEXT NOT NULL DEFAULT '',
-  category TEXT NOT NULL DEFAULT 'Application',
-  platform TEXT NOT NULL DEFAULT 'Windows',
-  published INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
-  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now'))
-);
-CREATE INDEX IF NOT EXISTS idx_fivem_files_published ON fivem_files(published);
-CREATE INDEX IF NOT EXISTS idx_fivem_files_updated_at ON fivem_files(updated_at);
-`;
 
 let fivemSchemaPromise = null;
 
