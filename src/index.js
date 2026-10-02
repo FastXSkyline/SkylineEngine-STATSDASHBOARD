@@ -29,8 +29,8 @@ export default {
           await env.DB.prepare(
             `INSERT INTO launches
                (user_id, user_name, app_version, os, os_version, arch, locale,
-                tz_offset_min, screen_w, screen_h, cpu_cores, ram_gb, event, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                tz_offset_min, screen_w, screen_h, cpu_cores, ram_gb, cpu_model, gpu_model, ram_free_gb, ram_used_pct, monitor_count, session_id, event, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                      strftime('%Y-%m-%d %H:%M:%S','now'))`
           )
             .bind(
@@ -46,6 +46,12 @@ export default {
               int(body.screen_h, 0, 30000),
               int(body.cpu_cores, 0, 1024),
               int(body.ram_gb, 0, 102400),
+              text(body.cpu_model, 128, null),
+              text(body.gpu_model, 128, null),
+              int(body.ram_free_gb, 0, 102400),
+              int(body.ram_used_pct, 0, 100),
+              int(body.monitor_count, 1, 32),
+              text(body.session_id, 64, null),
               text(body.event, 32, "launch")
             )
             .run();
@@ -290,6 +296,8 @@ async function buildStats(db, days) {
     platformRows,
     versionRows,
     hardwareRows,
+    cpuRows,
+    gpuRows,
     recentRows,
     userRows
   ] = await db.batch([
@@ -335,10 +343,21 @@ async function buildStats(db, days) {
     db.prepare(
       `SELECT
          (SELECT ROUND(AVG(cpu_cores), 1) FROM launches WHERE cpu_cores > 0) AS avg_cores,
-         (SELECT ROUND(AVG(ram_gb)) FROM launches WHERE ram_gb > 0) AS avg_ram,
+         (SELECT ROUND(AVG(ram_gb), 1) FROM launches WHERE ram_gb > 0) AS avg_ram,
+         (SELECT ROUND(AVG(ram_used_pct), 1) FROM launches WHERE ram_used_pct >= 0) AS avg_ram_used_pct,
          (SELECT COUNT(*) FROM launches WHERE cpu_cores > 0) AS samples,
          (SELECT screen_w || 'x' || screen_h FROM launches WHERE screen_w > 0
           GROUP BY screen_w, screen_h ORDER BY COUNT(*) DESC LIMIT 1) AS common_screen`
+    ),
+    db.prepare(
+      `SELECT COALESCE(NULLIF(cpu_model, ''), 'Unknown CPU') AS model, COUNT(*) AS launches
+       FROM launches WHERE cpu_model IS NOT NULL AND cpu_model <> ''
+       GROUP BY cpu_model ORDER BY launches DESC LIMIT 5`
+    ),
+    db.prepare(
+      `SELECT COALESCE(NULLIF(gpu_model, ''), 'Unknown GPU') AS model, COUNT(*) AS launches
+       FROM launches WHERE gpu_model IS NOT NULL AND gpu_model <> ''
+       GROUP BY gpu_model ORDER BY launches DESC LIMIT 5`
     ),
     db.prepare(
       `SELECT l.user_id AS user_id,
@@ -347,6 +366,11 @@ async function buildStats(db, days) {
               COALESCE(l.os, 'unknown') AS os,
               COALESCE(l.os_version, '') AS os_version,
               l.created_at AS created_at,
+              l.cpu_model AS cpu_model,
+              l.gpu_model AS gpu_model,
+              l.ram_used_pct AS ram_used_pct,
+              l.monitor_count AS monitor_count,
+              l.session_id AS session_id,
               (l.created_at = (SELECT MIN(l2.created_at) FROM launches l2 WHERE l2.user_id = l.user_id)) AS is_first
        FROM launches l
        WHERE l.created_at IS NOT NULL
@@ -404,7 +428,10 @@ async function buildStats(db, days) {
       avgCores: number(hardwareRows.results?.[0]?.avg_cores) || null,
       avgRamGb: number(hardwareRows.results?.[0]?.avg_ram) || null,
       commonScreen: hardwareRows.results?.[0]?.common_screen || null,
-      samples: number(hardwareRows.results?.[0]?.samples)
+      avgRamUsedPct: number(hardwareRows.results?.[0]?.avg_ram_used_pct) || null,
+      samples: number(hardwareRows.results?.[0]?.samples),
+      cpuModels: (cpuRows.results || []).map((r) => ({ model: r.model, launches: number(r.launches) })),
+      gpuModels: (gpuRows.results || []).map((r) => ({ model: r.model, launches: number(r.launches) }))
     },
 
     recent: (recentRows.results || []).map((row) => ({
@@ -414,6 +441,11 @@ async function buildStats(db, days) {
       os: row.os,
       osVersion: row.os_version || "",
       createdAt: row.created_at,
+      cpuModel: row.cpu_model || "",
+      gpuModel: row.gpu_model || "",
+      ramUsedPct: number(row.ram_used_pct),
+      monitorCount: number(row.monitor_count),
+      sessionId: row.session_id || "",
       isNew: number(row.is_first) === 1
     })),
 
