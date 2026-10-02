@@ -141,20 +141,6 @@ box-shadow:0 8px 24px rgba(255,45,45,.12);
 .update-download { width:100%; }
 }
 
-.update-changelog{margin-top:20px;padding-top:18px;border-top:1px solid rgba(255,255,255,.06)}
-.changelog-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
-.changelog-title{color:#fff;font-size:13px;font-weight:650}
-.changelog-count{color:rgba(255,255,255,.35);font-size:11px}
-.changelog-list{display:grid;gap:14px}
-.changelog-group{display:grid;grid-template-columns:88px 1fr;gap:14px;align-items:start}
-.changelog-badge{display:inline-flex;justify-content:center;padding:5px 8px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
-.changelog-badge.added{border:1px solid rgba(80,200,120,.2);background:rgba(80,200,120,.07);color:#79d99b}
-.changelog-badge.fixed{border:1px solid rgba(100,160,255,.2);background:rgba(100,160,255,.07);color:#8db9ff}
-.changelog-badge.improved{border:1px solid rgba(255,180,70,.2);background:rgba(255,180,70,.07);color:#ffc477}
-.changelog-group ul{margin:0;padding:0;list-style:none;display:grid;gap:7px}
-.changelog-group li{position:relative;padding-left:13px;color:rgba(255,255,255,.52);font-size:12px;line-height:1.5}
-.changelog-group li::before{content:"";position:absolute;left:0;top:.58em;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.3)}
-@media (max-width:700px){.changelog-group{grid-template-columns:1fr;gap:8px}}
 
 .update-file-info{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px;padding:14px 0;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)}
 .file-info-item{display:flex;flex-direction:column;gap:5px;min-width:0}
