@@ -3,7 +3,7 @@ const API_URL = "/api/stats";
 const $ = (id) => document.getElementById(id);
 
 const state = {
-  days: 14,
+  days: 1,
   scope: "launches", // "launches" | "new"
   mode: "flat", // "flat" | "grouped"
   series: [],
