@@ -665,6 +665,22 @@ function applyStats(data) {
   }
 }
 
+function syncRangeDefault() {
+  const dropdown = $("rangeDropdown");
+  const button = $("rangeBtn");
+  const label = $("rangeLabel");
+  if (!dropdown || !button || !label) return;
+
+  state.days = 1;
+  label.textContent = "Last 24 hours";
+
+  dropdown.querySelectorAll(".dropdown-menu li").forEach((item) => {
+    item.classList.toggle("selected", item.dataset.days === "1");
+  });
+}
+
+syncRangeDefault();
+
 /* ------------------------------------------------------------
    Data loading
    ------------------------------------------------------------ */
@@ -748,7 +764,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 setupDropdown("rangeDropdown", (data) => {
-  state.days = Number.parseInt(data.days, 10) || 14;
+  state.days = Number.parseInt(data.days, 10) || 1;
   $("rangeLabel").textContent =
     state.days === 1 ? "Last 24 hours" : `Last ${state.days} days`;
   loadStats();
