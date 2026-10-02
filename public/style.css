@@ -854,3 +854,18 @@ footer span:last-child{display:flex;align-items:center;gap:8px}
 .recent-table th:nth-child(4),.recent-table td:nth-child(4){width:14%}
 .recent-table th:nth-child(5),.recent-table td:nth-child(5){width:20%}
 @media(max-width:760px){.recent-table{min-width:700px}}
+
+
+.recent-grouped-wrap{
+  width:100%;
+  max-width:none;
+  min-width:0;
+  padding-top:12px;
+}
+.recent-grouped-wrap .user-pack{
+  width:100%;
+  max-width:none;
+  min-width:0;
+  margin-left:0;
+  margin-right:0;
+}
