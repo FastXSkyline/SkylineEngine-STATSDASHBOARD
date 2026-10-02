@@ -831,4 +831,7 @@ chartPlot.addEventListener("touchstart", (event) => {
 }, { passive: true });
 
 loadStats();
-setInterval(loadStats, 5000);\ndocument.addEventListener("visibilitychange", () => {\n  if (!document.hidden) loadStats();\n});
+setInterval(loadStats, 5000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) loadStats();
+});
