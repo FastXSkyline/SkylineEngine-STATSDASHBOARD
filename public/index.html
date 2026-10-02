@@ -24,6 +24,7 @@
 <div class="nav-label">Control</div>
 <a class="nav-link active" href="/" aria-current="page"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></svg><span>Dashboard</span></a>
 <a class="nav-link" href="#analytics"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h3.6l2.3-5.6L12.6 18l2.3-6H21"/></svg><span>Analytics</span></a>
+<a class="nav-link" href="#fivem" id="fivemNav"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7.5h10l2 3.5-2 5.5H7L5 11z"/><path d="M9 11v3M7.5 12.5h3M15.5 11.5h.01M17.5 13.5h.01"/></svg><span>FiveM</span></a>
 <a class="nav-link" href="#users"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 19.5v-1.7a3.8 3.8 0 0 0-3.8-3.8H6.8A3.8 3.8 0 0 0 3 17.8v1.7"/><circle cx="9.2" cy="7.7" r="3.4"/><path d="M16 4.6a3.4 3.4 0 0 1 0 6.3"/><path d="M21 19.5v-1.7a3.8 3.8 0 0 0-2.9-3.7"/></svg><span>Users</span></a>
 </div>
 <div class="nav-group">
@@ -85,6 +86,14 @@ How it works
 <a class="tab" href="#database">D1 database</a>
 </nav>
 
+<section class="fivem-admin" id="fivem" hidden aria-label="FiveM file manager">
+<div class="fivem-admin-head">
+<div><div class="eyebrow">FiveM library</div><h2>File manager<span class="dot">.</span></h2><p>Create and manage the files that will later be published to the public download page.</p></div>
+<button class="fivem-create-btn" type="button" id="fivemCreateBtn"><span>+</span> Create file</button>
+</div>
+<div class="fivem-toolbar"><div><strong>Files</strong><span>0 published · 0 drafts</span></div><div class="fivem-search-placeholder">Search files</div></div>
+<div class="fivem-empty"><div class="fivem-empty-icon"><svg class="ic ic-18" viewBox="0 0 24 24"><path d="M4 6.5h6l1.5 2H20v9H4z"/><path d="M12 11v4M10 13h4"/></svg></div><strong>No FiveM files yet</strong><span>Your published applications and files will appear here.</span><button type="button" class="fivem-empty-btn" id="fivemEmptyCreate">Create your first file</button></div>
+</section>
 <section class="stats-grid" aria-label="Key statistics">
 <article class="stat-card">
 <div class="stat-top"><span class="stat-label">Total launches</span><span class="stat-chip">All time</span></div>
