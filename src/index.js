@@ -882,7 +882,7 @@ function fivemPayload(body) {
     published: source.published ? 1 : 0
   };
   if (!payload.name) return { error: "File name is required." };
-  if (payload.download_url && !/^https?:\\/\\//i.test(payload.download_url)) return { error: "Download URL must start with http:// or https://." };
+  if (payload.download_url && !/^https?:\/\//i.test(payload.download_url)) return { error: "Download URL must start with http:// or https://." };
   return payload;
 }
 
