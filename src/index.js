@@ -131,17 +131,25 @@ const TELEMETRY_COLUMNS = [
   ["session_id", "TEXT"]
 ];
 
+let telemetrySchemaPromise = null;
+
 async function ensureTelemetrySchema(db) {
-  for (const [column, definition] of TELEMETRY_COLUMNS) {
+  if (telemetrySchemaPromise) return telemetrySchemaPromise;
+
+  telemetrySchemaPromise = (async () => {
+    for (const [column, definition] of TELEMETRY_COLUMNS) {
     try {
       await db.prepare(`ALTER TABLE launches ADD COLUMN ${column} ${definition}`).run();
     } catch (_) {}
   }
 
-  try { await db.prepare("CREATE INDEX IF NOT EXISTS idx_launches_created_at ON launches(created_at)").run(); } catch (_) {}
-  try { await db.prepare("CREATE INDEX IF NOT EXISTS idx_launches_cpu_model ON launches(cpu_model)").run(); } catch (_) {}
-  try { await db.prepare("CREATE INDEX IF NOT EXISTS idx_launches_gpu_model ON launches(gpu_model)").run(); } catch (_) {}
-  try { await db.prepare("CREATE INDEX IF NOT EXISTS idx_launches_session_id ON launches(session_id)").run(); } catch (_) {}
+    try { await db.prepare("CREATE INDEX IF NOT EXISTS idx_launches_created_at ON launches(created_at)").run(); } catch (_) {}
+    try { await db.prepare("CREATE INDEX IF NOT EXISTS idx_launches_cpu_model ON launches(cpu_model)").run(); } catch (_) {}
+    try { await db.prepare("CREATE INDEX IF NOT EXISTS idx_launches_gpu_model ON launches(gpu_model)").run(); } catch (_) {}
+    try { await db.prepare("CREATE INDEX IF NOT EXISTS idx_launches_session_id ON launches(session_id)").run(); } catch (_) {}
+  })();
+
+  return telemetrySchemaPromise;
 }
 
 
