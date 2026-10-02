@@ -148,8 +148,10 @@ export default {
     if (url.pathname === "/api/stats" && request.method === "GET") {
       try {
         const days = clampInt(url.searchParams.get("days"), 14, 1, 90);
+        const recentMode = url.searchParams.get("recentMode") === "flat" ? "flat" : "grouped";
+        const recentPage = clampInt(url.searchParams.get("recentPage"), 1, 1, 100000);
         await ensureTelemetrySchema(env.DB);
-        return json(await buildStats(env.DB, days));
+        return json(await buildStats(env.DB, days, recentMode, recentPage));
       } catch (error) {
         // Keep a useful response if a D1 query fails, but expose the reason instead of silently
         // turning the whole dashboard into an empty legacy view.
@@ -567,7 +569,7 @@ function legacyStats(row) {
   };
 }
 
-async function buildStats(db, days) {
+async function buildStats(db, days, recentMode = "grouped", recentPage = 1) {
   const hourSince = `-${days * 24} hours`;
 
   // Keep the dashboard alive even when an optional telemetry column is
@@ -603,6 +605,7 @@ async function buildStats(db, days) {
     cpuRows,
     gpuRows,
     recentRows,
+    recentUserCount,
     userRows
   ] = await Promise.all([
     safeFirst(db.prepare(
@@ -666,23 +669,37 @@ async function buildStats(db, days) {
        GROUP BY gpu_model ORDER BY launches DESC LIMIT 5`
     )),
     safeAll(db.prepare(
-      `SELECT l.user_id AS user_id,
-              (SELECT l3.user_name FROM launches l3 WHERE l3.user_id = l.user_id AND l3.user_name IS NOT NULL ORDER BY l3.created_at DESC LIMIT 1) AS user_name,
-              l.app_version AS app_version,
-              COALESCE(l.os, 'unknown') AS os,
-              COALESCE(l.os_version, '') AS os_version,
-              l.created_at AS created_at,
-              l.cpu_model AS cpu_model,
-              l.gpu_model AS gpu_model,
-              l.ram_used_pct AS ram_used_pct,
-              l.monitor_count AS monitor_count,
-              l.session_id AS session_id,
-              (l.created_at = (SELECT MIN(l2.created_at) FROM launches l2 WHERE l2.user_id = l.user_id)) AS is_first
-       FROM launches l
-       WHERE l.created_at IS NOT NULL
-       ORDER BY l.created_at DESC
-       LIMIT 1000`
-    )),
+      recentMode === "grouped"
+        ? `WITH ranked_users AS (
+             SELECT user_id, MAX(created_at) AS last_at
+             FROM launches WHERE created_at IS NOT NULL
+             GROUP BY user_id ORDER BY last_at DESC
+             LIMIT ? OFFSET ?
+           )
+           SELECT l.user_id AS user_id,
+                  (SELECT l3.user_name FROM launches l3 WHERE l3.user_id = l.user_id AND l3.user_name IS NOT NULL ORDER BY l3.created_at DESC LIMIT 1) AS user_name,
+                  l.app_version AS app_version, COALESCE(l.os, 'unknown') AS os,
+                  COALESCE(l.os_version, '') AS os_version, l.created_at AS created_at,
+                  l.cpu_model AS cpu_model, l.gpu_model AS gpu_model,
+                  l.ram_used_pct AS ram_used_pct, l.monitor_count AS monitor_count,
+                  l.session_id AS session_id,
+                  (SELECT COUNT(*) FROM launches lx WHERE lx.user_id = l.user_id) AS user_launches,
+                  (l.created_at = (SELECT MIN(l2.created_at) FROM launches l2 WHERE l2.user_id = l.user_id)) AS is_first
+           FROM launches l INNER JOIN ranked_users ru ON ru.user_id = l.user_id
+           WHERE l.created_at IS NOT NULL
+           ORDER BY ru.last_at DESC, l.created_at DESC`
+        : `SELECT l.user_id AS user_id,
+                  (SELECT l3.user_name FROM launches l3 WHERE l3.user_id = l.user_id AND l3.user_name IS NOT NULL ORDER BY l3.created_at DESC LIMIT 1) AS user_name,
+                  l.app_version AS app_version, COALESCE(l.os, 'unknown') AS os,
+                  COALESCE(l.os_version, '') AS os_version, l.created_at AS created_at,
+                  l.cpu_model AS cpu_model, l.gpu_model AS gpu_model,
+                  l.ram_used_pct AS ram_used_pct, l.monitor_count AS monitor_count,
+                  l.session_id AS session_id,
+                  (l.created_at = (SELECT MIN(l2.created_at) FROM launches l2 WHERE l2.user_id = l.user_id)) AS is_first
+           FROM launches l WHERE l.created_at IS NOT NULL
+           ORDER BY l.created_at DESC LIMIT 1000`
+    ).bind(...(recentMode === "grouped" ? [25, (recentPage - 1) * 25] : []))),
+    safeFirst(db.prepare("SELECT COUNT(DISTINCT user_id) AS users FROM launches WHERE created_at IS NOT NULL")),
     safeAll(db.prepare(
       `SELECT user_id,
               (SELECT l3.user_name FROM launches l3 WHERE l3.user_id = l.user_id AND l3.user_name IS NOT NULL ORDER BY l3.created_at DESC LIMIT 1) AS user_name,
@@ -736,6 +753,10 @@ async function buildStats(db, days) {
       cpuModels: (cpuRows.results || []).map((r) => ({ model: r.model, launches: number(r.launches) })),
       gpuModels: (gpuRows.results || []).map((r) => ({ model: r.model, launches: number(r.launches) }))
     },
+
+    recentTotalUsers: number(recentUserCount?.users),
+    recentPage,
+    recentPageSize: 25,
 
     recent: (recentRows.results || []).map((row) => ({
       userId: row.user_id,
