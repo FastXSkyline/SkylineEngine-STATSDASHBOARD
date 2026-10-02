@@ -967,7 +967,20 @@ function setupFiveMView(){
 }
 document.addEventListener("DOMContentLoaded",setupFiveMView);
 
-const fivemState = { files: [], editingId: null };
+const fivemState = { files: [], editingId: null, category: "free-menu" };
+
+function fivemFileCategory(file) {
+  const raw = (file?.category || "") + " " + (file?.name || "");
+  return raw.toLowerCase().includes("fps") ? "fps-packs" : "free-menu";
+}
+
+function updateFiveMLibraryTabs() {
+  document.querySelectorAll("[data-fivem-category]").forEach(tab => {
+    const active = tab.dataset.fivemCategory === fivemState.category;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", active ? "true" : "false");
+  });
+}
 
 async function fivemRequest(path = "", options = {}) {
   const response = await fetch("/api/fivem/files" + path, {
@@ -1000,6 +1013,7 @@ function fivemSetForm(file = null) {
 
 function openFiveMModal(file = null) {
   fivemState.editingId = file?.id || null;
+  if (!file) $("fivemCategory").value = fivemState.category === "fps-packs" ? "FPS Pack" : "Free Menu";
   fivemSetForm(file);
   $("fivemModal").hidden = false;
   document.body.classList.add("fivem-modal-open");
@@ -1017,9 +1031,12 @@ function renderFiveMFiles() {
   const empty = $("fivemEmpty");
   if (!list || !empty) return;
   const query = String($("fivemSearch")?.value || "").trim().toLowerCase();
-  const files = fivemState.files.filter(file => [file.name,file.version,file.description,file.file_name,file.category,file.platform].join(" ").toLowerCase().includes(query));
-  const published = fivemState.files.filter(file => Number(file.published) === 1).length;
-  $("fivemFileCounts").textContent = published + " published · " + (fivemState.files.length - published) + " drafts";
+  const files = fivemState.files
+    .filter(file => fivemFileCategory(file) === fivemState.category)
+    .filter(file => [file.name,file.version,file.description,file.file_name,file.category,file.platform].join(" ").toLowerCase().includes(query));
+  const categoryFiles = fivemState.files.filter(file => fivemFileCategory(file) === fivemState.category);
+  const published = categoryFiles.filter(file => Number(file.published) === 1).length;
+  $("fivemFileCounts").textContent = published + " published · " + (categoryFiles.length - published) + " drafts";
   empty.hidden = files.length !== 0;
   list.innerHTML = files.map(file => {
     const status = Number(file.published) === 1;
@@ -1119,6 +1136,16 @@ function setupFiveMManager() {
   if (!$("fivemList")) return;
   $("fivemDownloadModalClose")?.addEventListener("click", closeFiveMDownloadDetails);
   $("fivemDownloadModal")?.addEventListener("click", event => { if (event.target === $("fivemDownloadModal")) closeFiveMDownloadDetails(); });
+
+  document.querySelectorAll("[data-fivem-category]").forEach(tab => {
+    tab.addEventListener("click", () => {
+      fivemState.category = tab.dataset.fivemCategory || "free-menu";
+      updateFiveMLibraryTabs();
+      if ($("fivemSearch")) $("fivemSearch").value = "";
+      renderFiveMFiles();
+    });
+  });
+  updateFiveMLibraryTabs();
 
   $("fivemCreateBtn")?.addEventListener("click", () => openFiveMModal());
   $("fivemEmptyCreate")?.addEventListener("click", () => openFiveMModal());
