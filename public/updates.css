@@ -1,0 +1,142 @@
+/* Skyline Engine Updates */
+.updates-list {
+display:grid;
+gap:16px;
+margin-top:20px;
+}
+
+.update-card {
+position:relative;
+overflow:hidden;
+padding:24px;
+border:1px solid rgba(255,255,255,.08);
+border-radius:14px;
+background:linear-gradient(135deg,rgba(255,255,255,.035),rgba(255,255,255,.015));
+box-shadow:0 16px 40px rgba(0,0,0,.18);
+}
+
+.update-card::before {
+content:"";
+position:absolute;
+inset:0 auto 0 0;
+width:2px;
+background:#ff2d2d;
+box-shadow:0 0 18px rgba(255,45,45,.35);
+}
+
+.update-card-top {
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:16px;
+margin-bottom:18px;
+}
+
+.update-version {
+display:inline-flex;
+align-items:center;
+padding:6px 10px;
+border:1px solid rgba(255,45,45,.25);
+border-radius:7px;
+background:rgba(255,45,45,.08);
+color:#ff4a4a;
+font-size:12px;
+font-weight:700;
+letter-spacing:.04em;
+}
+
+.update-status {
+display:inline-flex;
+align-items:center;
+gap:7px;
+color:rgba(255,255,255,.55);
+font-size:12px;
+}
+
+.update-status::before {
+content:"";
+width:6px;
+height:6px;
+border-radius:50%;
+background:#ff2d2d;
+box-shadow:0 0 10px rgba(255,45,45,.55);
+}
+
+.update-title {
+margin:0;
+color:#fff;
+font-size:20px;
+font-weight:650;
+letter-spacing:-.02em;
+}
+
+.update-description {
+margin:8px 0 0;
+max-width:720px;
+color:rgba(255,255,255,.55);
+font-size:13px;
+line-height:1.6;
+}
+
+.update-meta {
+display:flex;
+flex-wrap:wrap;
+gap:10px 22px;
+margin-top:20px;
+padding-top:16px;
+border-top:1px solid rgba(255,255,255,.06);
+}
+
+.update-meta-item {
+display:flex;
+flex-direction:column;
+gap:4px;
+}
+
+.update-meta-label {
+color:rgba(255,255,255,.35);
+font-size:10px;
+text-transform:uppercase;
+letter-spacing:.08em;
+}
+
+.update-meta-value {
+color:rgba(255,255,255,.78);
+font-size:12px;
+}
+
+.update-actions {
+display:flex;
+justify-content:flex-end;
+margin-top:20px;
+}
+
+.update-download {
+display:inline-flex;
+align-items:center;
+justify-content:center;
+min-width:128px;
+padding:10px 16px;
+border:1px solid rgba(255,45,45,.35);
+border-radius:8px;
+background:rgba(255,45,45,.1);
+color:#fff;
+font-size:12px;
+font-weight:650;
+text-decoration:none;
+transition:transform .18s ease,background .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+
+.update-download:hover {
+transform:translateY(-1px);
+background:rgba(255,45,45,.18);
+border-color:rgba(255,45,45,.65);
+box-shadow:0 8px 24px rgba(255,45,45,.12);
+}
+
+@media (max-width:700px) {
+.update-card { padding:18px; }
+.update-card-top { align-items:flex-start; flex-direction:column; }
+.update-actions { justify-content:stretch; }
+.update-download { width:100%; }
+}
