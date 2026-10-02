@@ -702,24 +702,22 @@ async function buildStats(db, days, recentMode = "grouped", recentPage = 1) {
     safeFirst(db.prepare("SELECT COUNT(DISTINCT user_id) AS users FROM launches WHERE created_at IS NOT NULL")),
     safeAll(db.prepare(
       `SELECT user_id,
-              (SELECT l3.user_name FROM launches l3 WHERE l3.user_id = l.user_id AND l3.user_name IS NOT NULL ORDER BY l3.created_at DESC LIMIT 1) AS user_name,
+              (SELECT l3.user_name FROM launches l3 WHERE l3.user_id = l.user_id AND l3.user_name IS NOT NULL ORDER BY l3.created_at DESC NULLS LAST LIMIT 1) AS user_name,
               COUNT(*) AS launches,
               MIN(created_at) AS first_at,
               MAX(created_at) AS last_at,
               (SELECT l2.app_version FROM launches l2
-                WHERE l2.user_id = l.user_id AND l2.created_at IS NOT NULL
-                ORDER BY l2.created_at DESC LIMIT 1) AS last_version,
+                WHERE l2.user_id = l.user_id
+                ORDER BY l2.created_at DESC NULLS LAST LIMIT 1) AS last_version,
               (SELECT COALESCE(NULLIF(l2.os, ''), 'unknown') FROM launches l2
-                WHERE l2.user_id = l.user_id AND l2.created_at IS NOT NULL
-                ORDER BY l2.created_at DESC LIMIT 1) AS last_os,
+                WHERE l2.user_id = l.user_id
+                ORDER BY l2.created_at DESC NULLS LAST LIMIT 1) AS last_os,
               (SELECT COALESCE(l2.os_version, '') FROM launches l2
-                WHERE l2.user_id = l.user_id AND l2.created_at IS NOT NULL
-                ORDER BY l2.created_at DESC LIMIT 1) AS last_os_version
+                WHERE l2.user_id = l.user_id
+                ORDER BY l2.created_at DESC NULLS LAST LIMIT 1) AS last_os_version
        FROM launches l
-       WHERE created_at IS NOT NULL
        GROUP BY user_id
-       ORDER BY last_at DESC
-       LIMIT 20`
+       ORDER BY last_at DESC NULLS LAST, user_id DESC`
     ))
   ]);
 
