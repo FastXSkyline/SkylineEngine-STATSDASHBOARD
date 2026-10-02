@@ -449,54 +449,6 @@ async function searchTelemetry(request, env) {
   }
 }
 
-/* ------------------------------------------------------------
-   Stats aggregation
-   ------------------------------------------------------------ */") + "%";
-    const result = await env.DB.prepare(
-      `SELECT user_id, user_name, app_version, os, os_version, cpu_model, gpu_model,
-              ram_gb, ram_free_gb, ram_used_pct, monitor_count, screen_w, screen_h,
-              session_id, event, created_at
-       FROM launches
-       WHERE CAST(user_id AS TEXT) LIKE ? ESCAPE '\\\\'
-          OR COALESCE(user_name, '') LIKE ? ESCAPE '\\\\'
-          OR COALESCE(app_version, '') LIKE ? ESCAPE '\\\\'
-          OR COALESCE(os, '') LIKE ? ESCAPE '\\\\'
-          OR COALESCE(os_version, '') LIKE ? ESCAPE '\\\\'
-          OR COALESCE(cpu_model, '') LIKE ? ESCAPE '\\\\'
-          OR COALESCE(gpu_model, '') LIKE ? ESCAPE '\\\\'
-          OR COALESCE(session_id, '') LIKE ? ESCAPE '\\\\'
-       ORDER BY created_at DESC
-       LIMIT ?`
-    ).bind(like, like, like, like, like, like, like, like, limit).all();
-
-    return json({
-      query: q,
-      results: (result.results || []).map((row) => ({
-        userId: row.user_id,
-        userName: row.user_name || "",
-        appVersion: row.app_version || "",
-        os: row.os || "unknown",
-        osVersion: row.os_version || "",
-        cpuModel: row.cpu_model || "",
-        gpuModel: row.gpu_model || "",
-        ramGb: number(row.ram_gb),
-        ramFreeGb: number(row.ram_free_gb),
-        ramUsedPct: number(row.ram_used_pct),
-        monitorCount: number(row.monitor_count),
-        screen: row.screen_w && row.screen_h ? String(row.screen_w) + "x" + String(row.screen_h) : "",
-        sessionId: row.session_id || "",
-        event: row.event || "launch",
-        createdAt: row.created_at
-      }))
-    });
-  } catch (error) {
-    return json({ error: String(error?.message || "Search failed.").slice(0, 300) }, 500);
-  }
-}
-
-/* ------------------------------------------------------------
-   Stats aggregation
-   ------------------------------------------------------------ */
 function legacyStats(row) {
   const launches = number(row?.launches);
   const users = number(row?.users);
