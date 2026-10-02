@@ -13,12 +13,15 @@ export default {
 
   // Authentication temporarily disabled. The dashboard is publicly accessible while the login system is being repaired.
 
-    if ((url.pathname === "/launch" || url.pathname === "/launchstats" || url.pathname === "/api/launchstats") && request.method === "POST") {
+    if ((url.pathname === "/launch" || url.pathname === "/launchstats" || url.pathname === "/api/launch" || url.pathname === "/api/launchstats" || url.pathname === "/stats/launch") && request.method === "POST") {
       try {
-        const body = await request.json();
+        const rawBody = await request.json();
+        const body = rawBody?.launchstats && typeof rawBody.launchstats === "object"
+          ? { ...rawBody.launchstats, ...rawBody }
+          : rawBody;
 
-        const userId = body.user_id;
-        if (!userId || typeof userId !== "string") {
+        const userId = body.user_id ?? body.userId ?? body.userid ?? body.userID ?? body.id;
+        if (!userId || (typeof userId !== "string" && typeof userId !== "number")) {
           return json({ error: "user_id is required" }, 400);
         }
 
@@ -31,9 +34,9 @@ export default {
                      strftime('%Y-%m-%d %H:%M:%S','now'))`
           )
             .bind(
-              userId,
-              text(body.user_name, 64, null),
-              text(body.app_version, 64, "unknown"),
+              String(userId),
+              text(body.user_name ?? body.userName ?? body.username, 64, null),
+              text(body.app_version ?? body.appVersion ?? body.version, 64, "unknown"),
               text(body.os, 32, "unknown"),
               text(body.os_version, 32, null),
               text(body.arch, 16, null),
