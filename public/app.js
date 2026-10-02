@@ -650,7 +650,7 @@ function renderUserDetails(rows, totalUsers, degraded) {
     return;
   }
 
-  tag.textContent = `${Math.min(rows.length, 20)} of ${formatNumber(totalUsers)}`;
+  tag.textContent = `${formatNumber(rows.length)} of ${formatNumber(totalUsers)}`;
 
   body.innerHTML = rows
     .map((row) => {
