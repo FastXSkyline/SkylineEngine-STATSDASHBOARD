@@ -484,6 +484,11 @@ function renderRecent(rows, mode) {
 /* Grouped view: one "pack" per user; click the header to expand its launch rows */
 function renderRecentGrouped(rows) {
   const body = $("recentGroupedBody");
+  const openUsers = new Set(
+    [...body.querySelectorAll(".user-pack")]
+      .filter((pack) => pack.querySelector(".user-pack-body")?.classList.contains("open"))
+      .map((pack) => pack.dataset.user)
+  );
 
   const groups = new Map();
   for (const row of rows) {
@@ -541,6 +546,16 @@ function renderRecentGrouped(rows) {
       );
     })
     .join("");
+
+  body.querySelectorAll(".user-pack").forEach((pack) => {
+    if (!openUsers.has(pack.dataset.user)) return;
+    const bodyEl = pack.querySelector(".user-pack-body");
+    const toggle = pack.querySelector(".user-pack-toggle");
+    if (bodyEl && toggle) {
+      bodyEl.classList.add("open");
+      toggle.setAttribute("aria-expanded", "true");
+    }
+  });
 
   /* toggle handlers on the new pack headers */
   body.querySelectorAll(".user-pack-header").forEach((header) => {
