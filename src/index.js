@@ -892,7 +892,7 @@ function corsHeaders() {
 async function listFiveMFiles(db) {
   try {
     await ensureFiveMSchema(db);
-    const result = await db.prepare("SELECT id, name, version, description, download_url, file_name, category, platform, published, created_at, updated_at FROM fivem_files ORDER BY updated_at DESC, id DESC").all();
+    const result = await db.prepare("SELECT id, name, version, description, download_url, file_name, category, platform, published, downloadable, license_key, created_at, updated_at FROM fivem_files ORDER BY updated_at DESC, id DESC").all();
     return json({ files: result.results || [] });
   } catch (error) {
     return json({ error: String(error?.message || "Failed to load FiveM files").slice(0, 300) }, 500);
