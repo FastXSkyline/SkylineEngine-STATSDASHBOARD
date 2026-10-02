@@ -715,15 +715,18 @@ syncRangeDefault();
 /* ------------------------------------------------------------
    Data loading
    ------------------------------------------------------------ */
-async function loadStats() {
+async function loadStats(options = {}) {
+  const silent = Boolean(options.silent);
   const refreshBtn = $("refreshBtn");
   const refreshLabel = $("refreshLabel");
   const statsGrid = document.querySelector(".stats-grid");
 
-  refreshBtn.disabled = true;
-  refreshBtn.classList.add("spin");
-  refreshLabel.textContent = "Loading";
-  statsGrid.classList.add("is-loading");
+  if (!silent) {
+    refreshBtn.disabled = true;
+    refreshBtn.classList.add("spin");
+    refreshLabel.textContent = "Loading";
+    statsGrid.classList.add("is-loading");
+  }
 
   try {
     const response = await fetch(`${API_URL}?days=${state.days}&_=${Date.now()}`, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
@@ -742,10 +745,12 @@ async function loadStats() {
       $("userDetailsBody").innerHTML = `<tr><td colspan="6" class="empty-table"><span class="empty-chip">${emptyChipIcon()}Could not reach the Skyline API</span></td></tr>`;
     }
   } finally {
-    refreshBtn.disabled = false;
-    refreshBtn.classList.remove("spin");
-    refreshLabel.textContent = "Refresh";
-    statsGrid.classList.remove("is-loading");
+    if (!silent) {
+      refreshBtn.disabled = false;
+      refreshBtn.classList.remove("spin");
+      refreshLabel.textContent = "Refresh";
+      statsGrid.classList.remove("is-loading");
+    }
   }
 }
 
@@ -886,7 +891,7 @@ chartPlot.addEventListener("touchstart", (event) => {
 }, { passive: true });
 
 loadStats();
-setInterval(loadStats, 5000);
+setInterval(() => loadStats({ silent: true }), 5000);
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) loadStats();
 });
