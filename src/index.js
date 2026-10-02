@@ -8,7 +8,7 @@ export default {
 
     if (url.pathname === "/api/auth/login" && request.method === "POST") return keyAuthLogin(request, env);
     if (url.pathname === "/api/auth/logout" && request.method === "POST") return logout(request, env);
-    if (url.pathname === "/api/auth/session" && request.method === "GET") return json({ authenticated: await isAuthenticated(request, env) });
+    if (url.pathname === "/api/auth/session" && request.method === "GET") {\n      const authenticated = await isAuthenticated(request, env);\n      return json({ authenticated });\n    }
 
     if (url.pathname === "/" && request.method === "GET" && !(await isAuthenticated(request, env))) {
       return env.ASSETS.fetch(new Request(new URL("/login.html", request.url), request));
