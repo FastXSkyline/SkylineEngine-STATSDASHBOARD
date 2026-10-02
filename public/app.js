@@ -440,9 +440,17 @@ function userCell(userName, userId) {
 
 function renderRecent(rows, mode) {
   const body = $("recentBody");
+  const groupedBody = $("recentGroupedBody");
+
+  if (groupedBody) groupedBody.hidden = mode !== "grouped";
+  body.closest(".table-wrap").hidden = mode === "grouped";
 
   if (!rows || !rows.length) {
-    body.innerHTML = `<tr><td colspan="5" class="empty-table"><span class="empty-chip">${emptyChipIcon()}No launch records yet</span></td></tr>`;
+    if (mode === "grouped" && groupedBody) {
+      groupedBody.innerHTML = `<div class="empty-table"><span class="empty-chip">${emptyChipIcon()}No launch records yet</span></div>`;
+    } else {
+      body.innerHTML = `<tr><td colspan="5" class="empty-table"><span class="empty-chip">${emptyChipIcon()}No launch records yet</span></td></tr>`;
+    }
     return;
   }
 
@@ -475,7 +483,7 @@ function renderRecent(rows, mode) {
 
 /* Grouped view: one "pack" per user; click the header to expand its launch rows */
 function renderRecentGrouped(rows) {
-  const body = $("recentBody");
+  const body = $("recentGroupedBody");
 
   const groups = new Map();
   for (const row of rows) {
