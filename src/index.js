@@ -98,10 +98,24 @@ export default {
     if (url.pathname === "/api/public/fivem/files" && request.method === "GET") {
       try {
         await ensureFiveMSchema(env.DB);
-        const result = await env.DB.prepare(
-          "SELECT id, name, version, description, download_url, file_name, category, platform, downloadable, created_at, updated_at FROM fivem_files WHERE published = 1 ORDER BY updated_at DESC, id DESC"
-        ).all();
-        return json({ files: result.results || [] });
+        let result;
+        try {
+          result = await env.DB.prepare(
+            "SELECT id, name, version, description, download_url, file_name, category, platform, downloadable, created_at, updated_at FROM fivem_files WHERE published = 1 ORDER BY updated_at DESC, id DESC"
+          ).all();
+        } catch (_) {
+          // Keep the public release page compatible with an older D1 table that
+          // has not received the optional downloadable column yet.
+          result = await env.DB.prepare(
+            "SELECT id, name, version, description, download_url, file_name, category, platform, created_at, updated_at FROM fivem_files WHERE published = 1 ORDER BY updated_at DESC, id DESC"
+          ).all();
+        }
+        return json({
+          files: (result.results || []).map((file) => ({
+            ...file,
+            downloadable: file.downloadable === undefined ? 1 : file.downloadable
+          }))
+        });
       } catch (error) {
         return json({ error: "Failed to load published FiveM files." }, 500);
       }
