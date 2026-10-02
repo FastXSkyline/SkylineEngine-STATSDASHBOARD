@@ -1359,3 +1359,44 @@ body.fivem-download-modal-open{overflow:hidden}
 
 
 .recent-pagination{display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 0 2px}.recent-pagination button{min-width:32px;height:32px;padding:0 10px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(255,255,255,.025);color:#929298;font:600 10px inherit;cursor:pointer;transition:.18s ease}.recent-pagination button:hover:not(:disabled){color:#fff;border-color:rgba(255,45,45,.28);background:rgba(255,45,45,.08)}.recent-pagination button.active{color:#fff;border-color:rgba(255,45,45,.38);background:rgba(255,45,45,.14);box-shadow:0 0 14px rgba(255,45,45,.08)}.recent-pagination button:disabled{opacity:.38;cursor:default}
+
+/* FiveM library category tabs */
+.fivem-library-tabs{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:0 0 22px;
+  padding:4px;
+  width:max-content;
+  max-width:100%;
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:10px;
+  background:rgba(255,255,255,.018);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.02);
+}
+.fivem-library-tab{
+  appearance:none;
+  min-height:36px;
+  padding:0 14px;
+  border:1px solid transparent;
+  border-radius:8px;
+  background:transparent;
+  color:#858891;
+  font:600 10.5px inherit;
+  cursor:pointer;
+  transition:background 180ms ease,border-color 180ms ease,color 180ms ease,box-shadow 180ms ease;
+}
+.fivem-library-tab:hover{
+  color:#e8e9ec;
+  background:rgba(255,255,255,.045);
+}
+.fivem-library-tab.active{
+  color:#fff;
+  border-color:rgba(255,45,45,.24);
+  background:linear-gradient(135deg,rgba(255,45,45,.16),rgba(255,45,45,.055));
+  box-shadow:0 7px 18px rgba(0,0,0,.14),0 0 18px rgba(255,45,45,.035);
+}
+@media(max-width:700px){
+  .fivem-library-tabs{width:100%}
+  .fivem-library-tab{flex:1;padding:0 9px}
+}
