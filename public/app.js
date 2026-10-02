@@ -1013,8 +1013,8 @@ function fivemSetForm(file = null) {
 
 function openFiveMModal(file = null) {
   fivemState.editingId = file?.id || null;
-  if (!file) $("fivemCategory").value = fivemState.category === "fps-packs" ? "FPS Pack" : "Free Menu";
   fivemSetForm(file);
+  if (!file) $("fivemCategory").value = fivemState.category === "fps-packs" ? "FPS Pack" : "Free Menu";
   $("fivemModal").hidden = false;
   document.body.classList.add("fivem-modal-open");
   setTimeout(() => $("fivemName")?.focus(), 20);
