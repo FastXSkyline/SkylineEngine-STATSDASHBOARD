@@ -1,4 +1,5 @@
-const API_URL = "/api/stats";
+const API_URL = "/api/stats";\nconst SEARCH_URL = "/api/search";
+
 
 const $ = (id) => document.getElementById(id);
 
@@ -19,6 +20,20 @@ const PLATFORM_COLORS = [
   "rgba(255,255,255,.17)",
   "rgba(255,255,255,.09)"
 ];
+
+async function openTelemetrySearch() {
+  const query = window.prompt("Search users, IDs, sessions, versions, CPUs, GPUs, or operating systems:");
+  if (query === null) return;
+  const q = query.trim();
+  if (!q) return;
+
+  window.location.href = "/search.html?q=" + encodeURIComponent(q);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const searchBtn = $("searchBtn");
+  if (searchBtn) searchBtn.addEventListener("click", openTelemetrySearch);
+});
 
 /* ------------------------------------------------------------
    Helpers
