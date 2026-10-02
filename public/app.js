@@ -960,6 +960,7 @@ function fivemSetForm(file = null) {
   $("fivemDescription").value = file?.description || "";
   $("fivemUrl").value = file?.download_url || "";
   $("fivemLicenseKey").value = file?.license_key || "";
+  $("fivemRarPassword").value = file?.rar_password || "";
   $("fivemFileName").value = file?.file_name || "";
   $("fivemCategory").value = file?.category || "Application";
   $("fivemPlatform").value = file?.platform || "Windows";
@@ -1015,7 +1016,7 @@ async function saveFiveMFile(event) {
   event.preventDefault();
   const errorBox = $("fivemFormError");
   const save = $("fivemSave");
-  const payload = { name: $("fivemName").value.trim(), version: $("fivemVersion").value.trim(), description: $("fivemDescription").value.trim(), download_url: $("fivemUrl").value.trim(), file_name: $("fivemFileName").value.trim(), category: $("fivemCategory").value.trim(), platform: $("fivemPlatform").value.trim(), license_key: $("fivemLicenseKey").value.trim(), published: $("fivemPublished").checked, downloadable: $("fivemDownloadable").checked };
+  const payload = { name: $("fivemName").value.trim(), version: $("fivemVersion").value.trim(), description: $("fivemDescription").value.trim(), download_url: $("fivemUrl").value.trim(), file_name: $("fivemFileName").value.trim(), category: $("fivemCategory").value.trim(), platform: $("fivemPlatform").value.trim(), license_key: $("fivemLicenseKey").value.trim(), rar_password: $("fivemRarPassword").value.trim(), published: $("fivemPublished").checked, downloadable: $("fivemDownloadable").checked };
   if (!payload.name) { errorBox.textContent = "File name is required."; errorBox.hidden = false; return; }
   save.disabled = true;
   save.textContent = "Saving…";
