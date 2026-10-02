@@ -44,7 +44,10 @@ loginForm.addEventListener("submit", async (event) => {
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "Login failed.");
 
-    showMessage("Access granted. Opening dashboard…", "success");
+    showMessage("Access granted. Initializing dashboard…", "success");
+    document.body.classList.add("login-exit");
+    document.getElementById("loginLoader").classList.add("is-visible");
+    await new Promise((resolve) => setTimeout(resolve, 1250));
     location.replace("/");
   } catch (error) {
     showMessage(error.message || "Something went wrong.", "error");
