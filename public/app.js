@@ -996,7 +996,7 @@ function renderFiveMFiles() {
     const status = Number(file.published) === 1;
     const downloadable = Number(file.downloadable) !== 0;
     const downloads = Number(file.download_count || 0);
-    return '<article class="fivem-file"><div class="fivem-file-main"><div class="fivem-file-top"><span class="fivem-file-name">' + escapeHtml(file.name || "Untitled file") + '</span><span class="fivem-file-version">v' + escapeHtml(file.version || "—") + '</span><span class="fivem-download-count"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="m7.5 11.5 4.5 4.5 4.5-4.5"/><path d="M5 20h14"/></svg><b>' + formatNumber(downloads) + '</b> downloads</span></div><p class="fivem-file-desc">' + escapeHtml(file.description || "No description added.") + '</p><div class="fivem-file-meta"><span>' + escapeHtml(file.file_name || "No file name") + '</span><span>' + escapeHtml(file.category || "Application") + '</span><span>' + escapeHtml(file.platform || "Windows") + '</span><span class="fivem-status ' + (status ? "published" : "draft") + '">' + (status ? "Published" : "Draft") + '</span><span class="fivem-status ' + (downloadable ? "download-enabled" : "download-disabled") + '">' + (downloadable ? "Download enabled" : "Download disabled") + '</span></div></div><div class="fivem-file-actions"><button class="fivem-action" data-fivem-action="edit" data-id="' + file.id + '">Edit</button><button class="fivem-action" data-fivem-action="publish" data-id="' + file.id + '">' + (status ? "Unpublish" : "Publish") + '</button><button class="fivem-action danger" data-fivem-action="delete" data-id="' + file.id + '">Delete</button></div></article>';
+    return '<article class="fivem-file"><div class="fivem-file-main"><div class="fivem-file-top"><span class="fivem-file-name">' + escapeHtml(file.name || "Untitled file") + '</span><span class="fivem-file-version">v' + escapeHtml(file.version || "—") + '</span><button type="button" class="fivem-download-count" data-fivem-download-details="' + file.id + '" aria-label="View download details"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="m7.5 11.5 4.5 4.5 4.5-4.5"/><path d="M5 20h14"/></svg><b>' + formatNumber(downloads) + '</b> downloads</button></div><p class="fivem-file-desc">' + escapeHtml(file.description || "No description added.") + '</p><div class="fivem-file-meta"><span>' + escapeHtml(file.file_name || "No file name") + '</span><span>' + escapeHtml(file.category || "Application") + '</span><span>' + escapeHtml(file.platform || "Windows") + '</span><span class="fivem-status ' + (status ? "published" : "draft") + '">' + (status ? "Published" : "Draft") + '</span><span class="fivem-status ' + (downloadable ? "download-enabled" : "download-disabled") + '">' + (downloadable ? "Download enabled" : "Download disabled") + '</span></div></div><div class="fivem-file-actions"><button class="fivem-action" data-fivem-action="edit" data-id="' + file.id + '">Edit</button><button class="fivem-action" data-fivem-action="publish" data-id="' + file.id + '">' + (status ? "Unpublish" : "Publish") + '</button><button class="fivem-action danger" data-fivem-action="delete" data-id="' + file.id + '">Delete</button></div></article>';
   }).join("");
 }
 
@@ -1034,6 +1034,12 @@ async function saveFiveMFile(event) {
 }
 
 async function handleFiveMAction(event) {
+  const details = event.target.closest("[data-fivem-download-details]");
+  if (details) {
+    const file = fivemState.files.find(item => Number(item.id) === Number(details.dataset.fivemDownloadDetails));
+    if (file) openFiveMDownloadDetails(file);
+    return;
+  }
   const button = event.target.closest("[data-fivem-action]");
   if (!button) return;
   const id = Number(button.dataset.id);
@@ -1054,8 +1060,37 @@ async function handleFiveMAction(event) {
   }
 }
 
+function openFiveMDownloadDetails(file) {
+  if (!file || !$("fivemDownloadModal")) return;
+  $("fivemDownloadModalTitle").textContent = "Download details";
+  $("fivemDownloadRelease").textContent = file.name || "Untitled file";
+  $("fivemDownloadVersion").textContent = file.version ? "v" + file.version : "Version not set";
+  $("fivemDownloadTotal").textContent = formatNumber(file.download_count || 0);
+  const available = Number(file.downloadable) !== 0;
+  const published = Number(file.published) === 1;
+  const status = available && published ? "Available" : published ? "Disabled" : "Draft";
+  $("fivemDownloadStatus").textContent = status;
+  $("fivemDownloadStatus").className = status === "Available" ? "is-available" : "is-muted";
+  $("fivemDownloadFile").textContent = file.file_name || "Not provided";
+  $("fivemDownloadPlatform").textContent = file.platform || "Windows";
+  $("fivemDownloadCategory").textContent = file.category || "Application";
+  $("fivemDownloadUpdated").textContent = file.updated_at ? new Date(String(file.updated_at).replace(" ", "T") + "Z").toLocaleString() : "—";
+  $("fivemDownloadModal").hidden = false;
+  document.body.classList.add("fivem-download-modal-open");
+}
+
+function closeFiveMDownloadDetails() {
+  const modal = $("fivemDownloadModal");
+  if (!modal) return;
+  modal.hidden = true;
+  document.body.classList.remove("fivem-download-modal-open");
+}
+
 function setupFiveMManager() {
   if (!$("fivemList")) return;
+  $("fivemDownloadModalClose")?.addEventListener("click", closeFiveMDownloadDetails);
+  $("fivemDownloadModal")?.addEventListener("click", event => { if (event.target === $("fivemDownloadModal")) closeFiveMDownloadDetails(); });
+
   $("fivemCreateBtn")?.addEventListener("click", () => openFiveMModal());
   $("fivemEmptyCreate")?.addEventListener("click", () => openFiveMModal());
   $("fivemModalClose")?.addEventListener("click", closeFiveMModal);
@@ -1064,7 +1099,11 @@ function setupFiveMManager() {
   $("fivemList")?.addEventListener("click", handleFiveMAction);
   $("fivemSearch")?.addEventListener("input", renderFiveMFiles);
   $("fivemModal")?.addEventListener("click", event => { if (event.target === $("fivemModal")) closeFiveMModal(); });
-  document.addEventListener("keydown", event => { if (event.key === "Escape" && !$("fivemModal").hidden) closeFiveMModal(); });
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    if ($( "fivemDownloadModal" ) && !$( "fivemDownloadModal" ).hidden) closeFiveMDownloadDetails();
+    if ($( "fivemModal" ) && !$( "fivemModal" ).hidden) closeFiveMModal();
+  });
   loadFiveMFiles();
 }
 document.addEventListener("DOMContentLoaded", setupFiveMManager);
