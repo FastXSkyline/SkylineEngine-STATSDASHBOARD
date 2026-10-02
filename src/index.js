@@ -419,7 +419,7 @@ async function buildStats(db, days) {
        FROM launches l
        WHERE l.created_at IS NOT NULL
        ORDER BY l.created_at DESC
-       LIMIT 10`
+       LIMIT 1000`
     ),
     db.prepare(
       `SELECT user_id,
