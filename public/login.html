@@ -10,23 +10,80 @@
 </head>
 <body>
 <main class="login-shell">
-  <div class="login-glow"></div>
-  <section class="login-card">
-    <a class="brand" href="/" aria-label="Skyline Engine"><img class="brand-logo" src="https://raw.githubusercontent.com/FastXSkyline/SkylineEngine-STATSDASHBOARD/main/sellix_big.png" alt="Skyline Engine"></a>
-    <div class="eyebrow"><span class="status-dot"></span> SECURE ADMIN ACCESS</div>
-    <h1>Welcome <span>back.</span></h1>
-    <p class="subtitle">Sign in to your Skyline Engine command surface.</p>
-    <form id="loginForm">
-      <label for="username">KeyAuth username</label>
-      <input id="username" name="username" type="text" autocomplete="username" placeholder="Username" required>
-      <label for="password">Password</label>
-      <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Password" required>
-      <button id="loginBtn" type="submit">Sign in <span aria-hidden="true">↗</span></button>
-    </form>
-    <p id="message" class="message" role="status" aria-live="polite"></p>
-    <div class="card-footer"><span><i></i> Protected dashboard</span><span>SKYLINE / ADMIN</span></div>
+  <div class="login-glow" aria-hidden="true"></div>
+
+  <header class="login-top">
+    <a class="brand" href="/" aria-label="Skyline Engine">
+      <img class="brand-logo" src="https://raw.githubusercontent.com/FastXSkyline/SkylineEngine-STATSDASHBOARD/main/sellix_big.png" alt="Skyline Engine">
+    </a>
+    <div class="system-status">
+      <span class="status-dot" aria-hidden="true"></span>
+      System online
+    </div>
+  </header>
+
+  <section class="login-stage">
+    <div class="login-intro">
+      <div class="eyebrow">
+        <span class="status-dot" aria-hidden="true"></span>
+        SECURE ADMIN ACCESS
+      </div>
+
+      <h2 class="intro-title">Command<br>surface<span>.</span></h2>
+      <p class="intro-copy">
+        Monitor Skyline Engine launches, users, telemetry, and API health from one private control surface.
+      </p>
+
+      <div class="intro-meta" aria-label="Dashboard features">
+        <span class="meta-chip"><i></i>Live telemetry</span>
+        <span class="meta-chip"><i></i>D1 analytics</span>
+        <span class="meta-chip"><i></i>Private access</span>
+      </div>
+
+      <div class="signal-card" aria-hidden="true">
+        <div class="signal-grid"></div>
+        <div class="signal-row">
+          <span class="signal-label">Skyline API</span>
+          <span class="signal-value">Connected</span>
+        </div>
+        <div class="signal-bars">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+      </div>
+    </div>
+
+    <section class="login-card">
+      <div class="card-head">
+        <span class="card-label">Authentication</span>
+        <span class="card-index">01 / 01</span>
+      </div>
+
+      <h1>Welcome back.</h1>
+      <p class="subtitle">Sign in with your KeyAuth account to continue.</p>
+
+      <form id="loginForm">
+        <label for="username">KeyAuth username</label>
+        <input id="username" name="username" type="text" autocomplete="username" placeholder="Username" required>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Password" required>
+
+        <button id="loginBtn" type="submit">Sign in <span aria-hidden="true">↗</span></button>
+      </form>
+
+      <p id="message" class="message" role="status" aria-live="polite"></p>
+
+      <div class="card-footer">
+        <span><i aria-hidden="true"></i> Protected dashboard</span>
+        <span>SKYLINE / ADMIN</span>
+      </div>
+    </section>
   </section>
-  <footer>SKYLINE ENGINE <b>·</b> PRIVATE CONTROL PANEL</footer>
+
+  <footer class="login-footer">
+    <span>Skyline Engine <b>·</b> Stats Dashboard</span>
+    <span class="footer-right">Secure connection <i class="footer-dot" aria-hidden="true"></i></span>
+  </footer>
 </main>
 </body>
 </html>
