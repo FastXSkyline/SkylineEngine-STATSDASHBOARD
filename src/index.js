@@ -18,6 +18,11 @@ export default {
       return json({ error: "Authentication required." }, 401);
     }
 
+    if (url.pathname === "/api/search" && request.method === "GET") {
+      if (!(await isAuthenticated(request, env))) return json({ error: "Authentication required." }, 401);
+      return searchTelemetry(request, env);
+    }
+
     if ((url.pathname === "/launch" || url.pathname === "/launchstats" || url.pathname === "/api/launch" || url.pathname === "/api/launchstats" || url.pathname === "/stats/launch") && request.method === "POST") {
       try {
         const rawBody = await request.json();
@@ -390,6 +395,61 @@ async function logout(request, env) {
     await env.DB.prepare("DELETE FROM admin_sessions WHERE token_hash = ?").bind(await sha256(token)).run();
   }
   return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json", "Set-Cookie": `${SESSION_COOKIE}=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`, ...corsHeaders() } });
+}
+
+async function searchTelemetry(request, env) {
+  try {
+    const url = new URL(request.url);
+    const q = String(url.searchParams.get("q") || "").trim().slice(0, 120);
+    const limit = Math.min(Math.max(Number.parseInt(url.searchParams.get("limit") || "100", 10) || 100, 1), 100);
+
+    if (!q) return json({ query: "", results: [] });
+
+    await ensureTelemetrySchema(env.DB);
+    const like = "%" + q.replace(/[\\%_]/g, "\\\\
+/* ------------------------------------------------------------
+   Stats aggregation
+   ------------------------------------------------------------ */") + "%";
+    const result = await env.DB.prepare(
+      `SELECT user_id, user_name, app_version, os, os_version, cpu_model, gpu_model,
+              ram_gb, ram_free_gb, ram_used_pct, monitor_count, screen_w, screen_h,
+              session_id, event, created_at
+       FROM launches
+       WHERE CAST(user_id AS TEXT) LIKE ? ESCAPE '\\\\'
+          OR COALESCE(user_name, '') LIKE ? ESCAPE '\\\\'
+          OR COALESCE(app_version, '') LIKE ? ESCAPE '\\\\'
+          OR COALESCE(os, '') LIKE ? ESCAPE '\\\\'
+          OR COALESCE(os_version, '') LIKE ? ESCAPE '\\\\'
+          OR COALESCE(cpu_model, '') LIKE ? ESCAPE '\\\\'
+          OR COALESCE(gpu_model, '') LIKE ? ESCAPE '\\\\'
+          OR COALESCE(session_id, '') LIKE ? ESCAPE '\\\\'
+       ORDER BY created_at DESC
+       LIMIT ?`
+    ).bind(like, like, like, like, like, like, like, like, limit).all();
+
+    return json({
+      query: q,
+      results: (result.results || []).map((row) => ({
+        userId: row.user_id,
+        userName: row.user_name || "",
+        appVersion: row.app_version || "",
+        os: row.os || "unknown",
+        osVersion: row.os_version || "",
+        cpuModel: row.cpu_model || "",
+        gpuModel: row.gpu_model || "",
+        ramGb: number(row.ram_gb),
+        ramFreeGb: number(row.ram_free_gb),
+        ramUsedPct: number(row.ram_used_pct),
+        monitorCount: number(row.monitor_count),
+        screen: row.screen_w && row.screen_h ? String(row.screen_w) + "x" + String(row.screen_h) : "",
+        sessionId: row.session_id || "",
+        event: row.event || "launch",
+        createdAt: row.created_at
+      }))
+    });
+  } catch (error) {
+    return json({ error: String(error?.message || "Search failed.").slice(0, 300) }, 500);
+  }
 }
 
 /* ------------------------------------------------------------
