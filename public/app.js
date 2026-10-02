@@ -464,6 +464,28 @@ function userCell(userName, userId) {
   );
 }
 
+function renderRecentPagination() {
+  const pagination = $("recentPagination");
+  if (!pagination) return;
+  const pages = Math.max(1, Math.ceil(state.recentTotalUsers / 25));
+  if (state.mode !== "grouped" || pages <= 1) {
+    pagination.hidden = true;
+    pagination.innerHTML = "";
+    return;
+  }
+  const start = Math.max(1, state.recentPage - 2);
+  const end = Math.min(pages, start + 4);
+  const items = [];
+  for (let page = start; page <= end; page++) {
+    items.push(`<button type="button" data-recent-page="${page}" class="${page === state.recentPage ? "active" : ""}" ${page === state.recentPage ? "disabled" : ""}>${page}</button>`);
+  }
+  pagination.hidden = false;
+  pagination.innerHTML =
+    `<button type="button" data-recent-page="${state.recentPage - 1}" ${state.recentPage <= 1 ? "disabled" : ""}>Previous</button>` +
+    items.join("") +
+    `<button type="button" data-recent-page="${state.recentPage + 1}" ${state.recentPage >= pages ? "disabled" : ""}>Next</button>`;
+}
+
 function renderRecent(rows, mode) {
   const body = $("recentBody");
   const groupedBody = $("recentGroupedBody");
@@ -698,6 +720,7 @@ function applyStats(data) {
   state.recentTotalUsers = Number(data.recentTotalUsers || 0);
     state.recentPage = Number(data.recentPage || state.recentPage || 1);
     renderRecent(data.recent || [], state.mode);
+    renderRecentPagination();
   renderUserDetails(data.userDetails || [], users, degraded);
 
   if (degraded) {
@@ -850,6 +873,7 @@ setupDropdown("scopeDropdown", (data) => {
 setupDropdown("modeDropdown", (data) => {
   state.mode = data.mode === "grouped" ? "grouped" : "flat";
   state.recentPage = 1;
+  renderRecentPagination();
   $("modeLabel").textContent = state.mode === "grouped" ? "Group by user" : "Flat list";
   loadStats();
 });
