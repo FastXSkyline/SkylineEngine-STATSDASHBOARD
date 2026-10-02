@@ -1,7 +1,4 @@
-const API_URL = "/api/stats";\nconst SEARCH_URL = "/api/search";
-
-
-const $ = (id) => document.getElementById(id);
+const API_URL = "/api/stats";\nconst $ = (id) => document.getElementById(id);
 
 const state = {
   days: 1,
@@ -739,10 +736,24 @@ async function loadStats(options = {}) {
   }
 
   try {
-    const response = await fetch(`${API_URL}?days=${state.days}&_=${Date.now()}`, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
-    if (!response.ok) throw new Error("API returned " + response.status);
+    const response = await fetch(`${API_URL}?days=${state.days}&_=${Date.now()}`, {
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+    });
 
-    applyStats(await response.json());
+    const data = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+      location.replace("/login.html");
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.errorMessage || data?.error || `API returned ${response.status}`);
+    }
+
+    applyStats(data);
   } catch (error) {
     console.error("Failed to load stats:", error);
     $("lastUpdated").textContent = "Connection error";
