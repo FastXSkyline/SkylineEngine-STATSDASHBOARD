@@ -382,11 +382,13 @@ function renderHardware(hardware) {
     ? [
         ["Avg CPU", hardware.avgCores ? `${hardware.avgCores} cores` : "—"],
         ["Avg memory", hardware.avgRamGb ? `${hardware.avgRamGb} GB` : "—"],
+        ["RAM used", hardware.avgRamUsedPct != null ? `${hardware.avgRamUsedPct}%` : "—"],
         ["Top resolution", hardware.commonScreen ? hardware.commonScreen.replace("x", " × ") : "—"]
       ]
     : [
         ["Avg CPU", "—"],
         ["Avg memory", "—"],
+        ["RAM used", "—"],
         ["Top resolution", "—"]
       ];
 
@@ -395,6 +397,20 @@ function renderHardware(hardware) {
     .join("");
 
   $("hardwareMeta").textContent = hasSamples ? `${formatNumber(hardware.samples)} samples` : "no data";
+
+  const renderModels = (id, rows, emptyLabel) => {
+    const list = $(id);
+    if (!list) return;
+    if (!rows || !rows.length) {
+      list.innerHTML = `<span>${emptyLabel}</span>`;
+      return;
+    }
+    list.innerHTML = rows.slice(0, 3).map((row) =>
+      `<span title="${escapeHtml(row.model)}">${escapeHtml(row.model)} <b>${formatNumber(row.launches)}</b></span>`
+    ).join("");
+  };
+  renderModels("cpuModelsList", hardware.cpuModels, "No CPU model data");
+  renderModels("gpuModelsList", hardware.gpuModels, "No GPU model data");
 }
 
 /* ------------------------------------------------------------
