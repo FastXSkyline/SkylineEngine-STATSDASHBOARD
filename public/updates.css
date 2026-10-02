@@ -155,3 +155,9 @@ box-shadow:0 8px 24px rgba(255,45,45,.12);
 .changelog-group li{position:relative;padding-left:13px;color:rgba(255,255,255,.52);font-size:12px;line-height:1.5}
 .changelog-group li::before{content:"";position:absolute;left:0;top:.58em;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.3)}
 @media (max-width:700px){.changelog-group{grid-template-columns:1fr;gap:8px}}
+
+.update-file-info{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px;padding:14px 0;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)}
+.file-info-item{display:flex;flex-direction:column;gap:5px;min-width:0}
+.file-info-label{color:rgba(255,255,255,.32);font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.file-info-value{color:rgba(255,255,255,.72);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:700px){.update-file-info{grid-template-columns:repeat(2,minmax(0,1fr))}}
