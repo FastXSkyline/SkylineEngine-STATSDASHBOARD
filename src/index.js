@@ -101,7 +101,7 @@ export default {
         let result;
         try {
           result = await env.DB.prepare(
-            "SELECT id, name, version, description, download_url, file_name, category, platform, downloadable, created_at, updated_at FROM fivem_files WHERE published = 1 ORDER BY updated_at DESC, id DESC"
+            "SELECT id, name, version, description, download_url, file_name, category, platform, downloadable, license_key, created_at, updated_at FROM fivem_files WHERE published = 1 ORDER BY updated_at DESC, id DESC"
           ).all();
         } catch (_) {
           // Keep the public release page compatible with an older D1 table that
@@ -241,6 +241,7 @@ async function ensureFiveMSchema(db) {
         platform TEXT NOT NULL DEFAULT 'Windows',
         published INTEGER NOT NULL DEFAULT 0,
         downloadable INTEGER NOT NULL DEFAULT 1,
+        license_key TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
         updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now'))
       )`
@@ -248,6 +249,7 @@ async function ensureFiveMSchema(db) {
     await db.prepare("CREATE INDEX IF NOT EXISTS idx_fivem_files_published ON fivem_files(published)").run();
     await db.prepare("CREATE INDEX IF NOT EXISTS idx_fivem_files_updated_at ON fivem_files(updated_at)").run();
     try { await db.prepare("ALTER TABLE fivem_files ADD COLUMN downloadable INTEGER NOT NULL DEFAULT 1").run(); } catch (_) {}
+    try { await db.prepare("ALTER TABLE fivem_files ADD COLUMN license_key TEXT NOT NULL DEFAULT ''").run(); } catch (_) {}
   })();
   return fivemSchemaPromise;
 }
@@ -908,7 +910,8 @@ function fivemPayload(body) {
     category: text(source.category, 64, "Application"),
     platform: text(source.platform, 32, "Windows"),
     published: source.published ? 1 : 0,
-    downloadable: source.downloadable !== false ? 1 : 0
+    downloadable: source.downloadable !== false ? 1 : 0,
+    license_key: text(source.license_key ?? source.licenseKey, 512, "")
   };
   if (!payload.name) return { error: "File name is required." };
   if (payload.download_url && !/^https?:\/\//i.test(payload.download_url)) return { error: "Download URL must start with http:// or https://." };
@@ -921,7 +924,7 @@ async function createFiveMFile(request, db) {
     const payload = fivemPayload(body);
     if (payload.error) return json({ error: payload.error }, 400);
     await ensureFiveMSchema(db);
-    const result = await db.prepare("INSERT INTO fivem_files (name, version, description, download_url, file_name, category, platform, published, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%d %H:%M:%S','now'), strftime('%Y-%m-%d %H:%M:%S','now'))").bind(payload.name, payload.version, payload.description, payload.download_url, payload.file_name, payload.category, payload.platform, payload.published, payload.downloadable).run();
+    const result = await db.prepare("INSERT INTO fivem_files (name, version, description, download_url, file_name, category, platform, published, downloadable, license_key, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%d %H:%M:%S','now'), strftime('%Y-%m-%d %H:%M:%S','now'))").bind(payload.name, payload.version, payload.description, payload.download_url, payload.file_name, payload.category, payload.platform, payload.published, payload.downloadable, payload.license_key).run();
     const file = await db.prepare("SELECT * FROM fivem_files WHERE id = ?").bind(result.meta?.last_row_id).first();
     return json({ success: true, file });
   } catch (error) {
@@ -939,7 +942,7 @@ async function updateFiveMFile(request, db, id) {
     const payload = fivemPayload(body);
     if (payload.error) return json({ error: payload.error }, 400);
     await ensureFiveMSchema(db);
-    await db.prepare("UPDATE fivem_files SET name=?, version=?, description=?, download_url=?, file_name=?, category=?, platform=?, published=?, downloadable=?, updated_at=strftime('%Y-%m-%d %H:%M:%S','now') WHERE id=?").bind(payload.name, payload.version, payload.description, payload.download_url, payload.file_name, payload.category, payload.platform, payload.published, payload.downloadable, fileId).run();
+    await db.prepare("UPDATE fivem_files SET name=?, version=?, description=?, download_url=?, file_name=?, category=?, platform=?, published=?, downloadable=?, license_key=?, updated_at=strftime('%Y-%m-%d %H:%M:%S','now') WHERE id=?").bind(payload.name, payload.version, payload.description, payload.download_url, payload.file_name, payload.category, payload.platform, payload.published, payload.downloadable, payload.license_key, fileId).run();
     const file = await db.prepare("SELECT * FROM fivem_files WHERE id = ?").bind(fileId).first();
     return json({ success: true, file });
   } catch (error) {
