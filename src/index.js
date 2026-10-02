@@ -13,7 +13,7 @@ export default {
 
   // Authentication temporarily disabled. The dashboard is publicly accessible while the login system is being repaired.
 
-    if (url.pathname === "/launch" && request.method === "POST") {
+    if ((url.pathname === "/launch" || url.pathname === "/launchstats" || url.pathname === "/api/launchstats") && request.method === "POST") {
       try {
         const body = await request.json();
 
