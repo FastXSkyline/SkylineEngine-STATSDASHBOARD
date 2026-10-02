@@ -95,6 +95,18 @@ export default {
       }
     }
 
+    if (url.pathname === "/api/public/fivem/files" && request.method === "GET") {
+      try {
+        await ensureFiveMSchema(env.DB);
+        const result = await env.DB.prepare(
+          "SELECT id, name, version, description, download_url, file_name, category, platform, created_at, updated_at FROM fivem_files WHERE published = 1 ORDER BY updated_at DESC, id DESC"
+        ).all();
+        return json({ files: result.results || [] });
+      } catch (error) {
+        return json({ error: "Failed to load published FiveM files." }, 500);
+      }
+    }
+
     if (url.pathname === "/api/fivem/files" && request.method === "GET") {
       if (!(await isAuthenticated(request, env))) return json({ error: "Authentication required." }, 401);
       return listFiveMFiles(env.DB);
