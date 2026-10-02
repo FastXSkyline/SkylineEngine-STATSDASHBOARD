@@ -1065,6 +1065,5 @@ function setupFiveMManager() {
   document.addEventListener("keydown", event => { if (event.key === "Escape" && !$("fivemModal").hidden) closeFiveMModal(); });
   loadFiveMFiles();
 }
-
 document.addEventListener("DOMContentLoaded", setupFiveMManager);
 
