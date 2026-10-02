@@ -173,6 +173,50 @@ async function ensureAuthTables(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS keyauth_device_bindings (username TEXT PRIMARY KEY, device_hash TEXT NOT NULL, bound_at INTEGER NOT NULL)").run();
 }
 
+const FIVEM_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS fivem_files (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  version TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  download_url TEXT NOT NULL DEFAULT '',
+  file_name TEXT NOT NULL DEFAULT '',
+  category TEXT NOT NULL DEFAULT 'Application',
+  platform TEXT NOT NULL DEFAULT 'Windows',
+  published INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_fivem_files_published ON fivem_files(published);
+CREATE INDEX IF NOT EXISTS idx_fivem_files_updated_at ON fivem_files(updated_at);
+`;
+
+let fivemSchemaPromise = null;
+
+async function ensureFiveMSchema(db) {
+  if (fivemSchemaPromise) return fivemSchemaPromise;
+  fivemSchemaPromise = (async () => {
+    await db.prepare(
+      `CREATE TABLE IF NOT EXISTS fivem_files (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        version TEXT NOT NULL DEFAULT '',
+        description TEXT NOT NULL DEFAULT '',
+        download_url TEXT NOT NULL DEFAULT '',
+        file_name TEXT NOT NULL DEFAULT '',
+        category TEXT NOT NULL DEFAULT 'Application',
+        platform TEXT NOT NULL DEFAULT 'Windows',
+        published INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
+        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now'))
+      )`
+    ).run();
+    await db.prepare("CREATE INDEX IF NOT EXISTS idx_fivem_files_published ON fivem_files(published)").run();
+    await db.prepare("CREATE INDEX IF NOT EXISTS idx_fivem_files_updated_at ON fivem_files(updated_at)").run();
+  })();
+  return fivemSchemaPromise;
+}
+
 async function sha256(value) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
