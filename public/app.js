@@ -935,9 +935,6 @@ function setupFiveMView(){
   nav.addEventListener("click",(event)=>{event.preventDefault();toggle(true);});
   document.querySelectorAll('a[href="#fivem"]').forEach((link)=>link.addEventListener("click",(event)=>{event.preventDefault();toggle(true);}));
   document.querySelectorAll('a[href="/"]').forEach((link)=>link.addEventListener("click",()=>toggle(false)));
-  const create=()=>{window.alert("FiveM file creation UI will be enabled in the next step.");};
-  document.getElementById("fivemCreateBtn")?.addEventListener("click",create);
-  document.getElementById("fivemEmptyCreate")?.addEventListener("click",create);
 }
 document.addEventListener("DOMContentLoaded",setupFiveMView);
 
