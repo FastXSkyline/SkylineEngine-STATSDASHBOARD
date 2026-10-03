@@ -750,8 +750,17 @@ syncRangeDefault();
 /* ------------------------------------------------------------
    Data loading
    ------------------------------------------------------------ */
+let statsRequestInFlight = null;
+let lastStatsFetchAt = 0;
+const STATS_CLIENT_MIN_INTERVAL = 30000;
+
 async function loadStats(options = {}) {
   const silent = Boolean(options.silent);
+  const force = Boolean(options.force);
+  const now = Date.now();
+  if (!force && statsRequestInFlight) return statsRequestInFlight;
+  if (!force && silent && now - lastStatsFetchAt < STATS_CLIENT_MIN_INTERVAL) return;
+  if (!force && !silent && now - lastStatsFetchAt < 5000) return;
   const refreshBtn = $("refreshBtn");
   const refreshLabel = $("refreshLabel");
   const statsGrid = document.querySelector(".stats-grid");
@@ -763,11 +772,11 @@ async function loadStats(options = {}) {
     statsGrid.classList.add("is-loading");
   }
 
+  statsRequestInFlight = (async () => {
   try {
-    const response = await fetch(`${API_URL}?days=${state.days}&recentMode=${state.mode}&recentPage=${state.recentPage}&_=${Date.now()}`, {
-      cache: "no-store",
-      credentials: "same-origin",
-      headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+    const response = await fetch(`${API_URL}?days=${state.days}&recentMode=${state.mode}&recentPage=${state.recentPage}`, {
+      cache: "default",
+      credentials: "same-origin"
     });
 
     const data = await response.json().catch(() => ({}));
@@ -782,6 +791,7 @@ async function loadStats(options = {}) {
     }
 
     applyStats(data);
+    lastStatsFetchAt = Date.now();
   } catch (error) {
     console.error("Failed to load stats:", error);
     $("lastUpdated").textContent = "Connection error";
@@ -794,6 +804,7 @@ async function loadStats(options = {}) {
       $("userDetailsBody").innerHTML = `<tr><td colspan="6" class="empty-table"><span class="empty-chip">${emptyChipIcon()}Could not reach the Skyline API</span></td></tr>`;
     }
   } finally {
+    statsRequestInFlight = null;
     if (!silent) {
       refreshBtn.disabled = false;
       refreshBtn.classList.remove("spin");
@@ -801,6 +812,8 @@ async function loadStats(options = {}) {
       statsGrid.classList.remove("is-loading");
     }
   }
+  })();
+  return statsRequestInFlight;
 }
 
 /* ------------------------------------------------------------
@@ -942,9 +955,9 @@ chartPlot.addEventListener("touchstart", (event) => {
 }, { passive: true });
 
 loadStats();
-setInterval(() => loadStats({ silent: true }), 5000);
+setInterval(() => loadStats({ silent: true }), 60000);
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) loadStats();
+  if (!document.hidden) loadStats({ silent: true });
 });
 
 
