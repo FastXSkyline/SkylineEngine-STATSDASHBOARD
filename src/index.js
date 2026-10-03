@@ -7,7 +7,7 @@ var index_default = {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders() });
     // === VERSION CHECK: visit /api/version to verify optimized code is running ===
     if (url.pathname === "/api/version" && request.method === "GET") {
-      return new Response(JSON.stringify({ version: "optimized-v4", cacheEnabled: true, cacheTTL: "5min", fixes: ["stats-cache-5min", "stable-cache-key", "client-polling-60s", "auth-schema-cached", "auth-session-cached-60s", "query-indexes"], deployedAt: new Date().toISOString() }), { headers: { "Content-Type": "application/json", "X-Skyline-Optimized": "v3", ...corsHeaders() } });
+      return new Response(JSON.stringify({ version: "optimized-v4", cacheEnabled: true, cacheTTL: "5min", fixes: ["stats-cache-5min", "stable-cache-key", "client-polling-60s", "auth-schema-cached", "auth-session-cached-60s", "query-indexes"], deployedAt: new Date().toISOString() }), { headers: { "Content-Type": "application/json", "X-Skyline-Optimized": "v4", ...corsHeaders() } });
     }
     if (url.pathname === "/api/auth/login" && request.method === "POST") return keyAuthLogin(request, env);
     if (url.pathname === "/api/auth/logout" && request.method === "POST") return logout(request, env);
@@ -50,7 +50,7 @@ var index_default = {
     if (url.pathname.startsWith("/api/fivem/files/") && request.method === "PUT") { if (!await isAuthenticated(request, env)) return json({ error: "Authentication required." }, 401); return updateFiveMFile(request, env.DB, url.pathname.split("/").pop()); }
     if (url.pathname.startsWith("/api/fivem/files/") && request.method === "DELETE") { if (!await isAuthenticated(request, env)) return json({ error: "Authentication required." }, 401); return deleteFiveMFile(env.DB, url.pathname.split("/").pop()); }
     if (url.pathname === "/api/stats" && request.method === "GET") {
-      // === FIX 1: 15-minute cache for stats responses ===
+      // === Optimized stats cache: stable query key + 5-minute edge cache ===
       const cacheKey = new Request(new URL("/api/stats" + url.search, url.origin).toString(), request);
       const cache = caches.default;
       const cached = await cache.match(cacheKey);
