@@ -760,7 +760,6 @@ async function loadStats(options = {}) {
   const now = Date.now();
   if (!force && statsRequestInFlight) return statsRequestInFlight;
   if (!force && silent && now - lastStatsFetchAt < STATS_CLIENT_MIN_INTERVAL) return;
-  if (!force && !silent && now - lastStatsFetchAt < 5000) return;
   const refreshBtn = $("refreshBtn");
   const refreshLabel = $("refreshLabel");
   const statsGrid = document.querySelector(".stats-grid");
