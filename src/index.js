@@ -7,7 +7,7 @@ var index_default = {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders() });
     // === VERSION CHECK: visit /api/version to verify optimized code is running ===
     if (url.pathname === "/api/version" && request.method === "GET") {
-      return new Response(JSON.stringify({ version: "optimized-v4", cacheEnabled: true, cacheTTL: "5min", fixes: ["stats-cache-5min", "stable-cache-key", "client-polling-60s", "auth-schema-cached", "auth-session-cached-60s", "query-indexes"], deployedAt: new Date().toISOString() }), { headers: { "Content-Type": "application/json", "X-Skyline-Optimized": "v4", ...corsHeaders() } });
+      return new Response(JSON.stringify({ version: "optimized-v5", cacheEnabled: true, cacheTTL: "5min", fixes: ["stats-cache-5min", "stable-cache-key", "client-polling-60s", "auth-schema-cached", "auth-session-cached-60s", "query-indexes", "shared-d1-releases"], deployedAt: new Date().toISOString() }), { headers: { "Content-Type": "application/json", "X-Skyline-Optimized": "v5", ...corsHeaders() } });
     }
     if (url.pathname === "/api/auth/login" && request.method === "POST") return keyAuthLogin(request, env);
     if (url.pathname === "/api/auth/logout" && request.method === "POST") return logout(request, env);
@@ -40,7 +40,7 @@ var index_default = {
         try { r = await env.DB.prepare("SELECT id, name, version, description, download_url, file_name, category, platform, downloadable, license_key, rar_password, created_at, updated_at FROM fivem_files WHERE published = 1 ORDER BY updated_at DESC, id DESC").all(); }
         catch (_) { r = await env.DB.prepare("SELECT id, name, version, description, download_url, file_name, category, platform, created_at, updated_at FROM fivem_files WHERE published = 1 ORDER BY updated_at DESC, id DESC").all(); }
         const response = json({ files: (r.results || []).map(f => ({ ...f, downloadable: f.downloadable === void 0 ? 1 : f.downloadable })) });
-        response.headers.set("Cache-Control", "public, max-age=30, s-maxage=30");
+        response.headers.set("Cache-Control", "public, max-age=60, s-maxage=60");
         return response;
       } catch (error) { return json({ error: "Failed to load published FiveM files." }, 500); }
     }
