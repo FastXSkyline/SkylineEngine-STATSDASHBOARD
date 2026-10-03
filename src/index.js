@@ -7,7 +7,7 @@ var index_default = {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders() });
     // === VERSION CHECK: visit /api/version to verify optimized code is running ===
     if (url.pathname === "/api/version" && request.method === "GET") {
-      return new Response(JSON.stringify({ version: "optimized-v3", cacheEnabled: true, cacheTTL: "15min", fixes: ["stats-cache-15min", "auth-schema-cached", "auth-session-cached-60s", "query-optimization"], deployedAt: new Date().toISOString() }), { headers: { "Content-Type": "application/json", "X-Skyline-Optimized": "v3", ...corsHeaders() } });
+      return new Response(JSON.stringify({ version: "optimized-v4", cacheEnabled: true, cacheTTL: "5min", fixes: ["stats-cache-5min", "stable-cache-key", "client-polling-60s", "auth-schema-cached", "auth-session-cached-60s", "query-indexes"], deployedAt: new Date().toISOString() }), { headers: { "Content-Type": "application/json", "X-Skyline-Optimized": "v3", ...corsHeaders() } });
     }
     if (url.pathname === "/api/auth/login" && request.method === "POST") return keyAuthLogin(request, env);
     if (url.pathname === "/api/auth/logout" && request.method === "POST") return logout(request, env);
@@ -39,7 +39,9 @@ var index_default = {
         let r;
         try { r = await env.DB.prepare("SELECT id, name, version, description, download_url, file_name, category, platform, downloadable, license_key, rar_password, created_at, updated_at FROM fivem_files WHERE published = 1 ORDER BY updated_at DESC, id DESC").all(); }
         catch (_) { r = await env.DB.prepare("SELECT id, name, version, description, download_url, file_name, category, platform, created_at, updated_at FROM fivem_files WHERE published = 1 ORDER BY updated_at DESC, id DESC").all(); }
-        return json({ files: (r.results || []).map(f => ({ ...f, downloadable: f.downloadable === void 0 ? 1 : f.downloadable })) });
+        const response = json({ files: (r.results || []).map(f => ({ ...f, downloadable: f.downloadable === void 0 ? 1 : f.downloadable })) });
+        response.headers.set("Cache-Control", "public, max-age=30, s-maxage=30");
+        return response;
       } catch (error) { return json({ error: "Failed to load published FiveM files." }, 500); }
     }
     if (url.pathname.startsWith("/api/public/fivem/files/") && url.pathname.endsWith("/download") && request.method === "POST") return incrementFiveMDownload(env.DB, url.pathname.split("/")[5]);
@@ -60,7 +62,7 @@ var index_default = {
         await ensureTelemetrySchema(env.DB);
         const statsData = await buildStats(env.DB, days, recentMode, recentPage);
         const response = json(statsData);
-        response.headers.set("Cache-Control", "public, max-age=900");
+        response.headers.set("Cache-Control", "public, max-age=300, s-maxage=300");
         await cache.put(cacheKey, response.clone());
         return response;
       } catch (error) {
@@ -81,7 +83,7 @@ async function ensureTelemetrySchema(db) {
   if (telemetrySchemaPromise) return telemetrySchemaPromise;
   telemetrySchemaPromise = (async () => {
     for (const [c, d] of TELEMETRY_COLUMNS) { try { await db.prepare("ALTER TABLE launches ADD COLUMN " + c + " " + d).run(); } catch (_) {} }
-    for (const idx of ["idx_launches_created_at ON launches(created_at)","idx_launches_cpu_model ON launches(cpu_model)","idx_launches_gpu_model ON launches(gpu_model)","idx_launches_session_id ON launches(session_id)"]) { try { await db.prepare("CREATE INDEX IF NOT EXISTS " + idx).run(); } catch (_) {} }
+    for (const idx of ["idx_launches_created_at ON launches(created_at)","idx_launches_user_id ON launches(user_id)","idx_launches_user_created_at ON launches(user_id, created_at)","idx_launches_cpu_model ON launches(cpu_model)","idx_launches_gpu_model ON launches(gpu_model)","idx_launches_session_id ON launches(session_id)","idx_launches_app_version ON launches(app_version)","idx_launches_os_version ON launches(os, os_version)"]) { try { await db.prepare("CREATE INDEX IF NOT EXISTS " + idx).run(); } catch (_) {} }
   })();
   return telemetrySchemaPromise;
 }
@@ -202,7 +204,7 @@ async function buildStats(db, days, recentMode, recentPage) {
   const safeFirst = async (s) => { try { return await s.first(); } catch (_) { return null; } };
   const [totals, today, week, newToday, newWeek, seriesRows, newSeriesRows, platformRows, versionRows, hardwareRow, cpuRows, gpuRows, recentRows, recentUserCount, userRows] = await Promise.all([
     safeFirst(db.prepare("SELECT COUNT(*) AS launches, COUNT(DISTINCT user_id) AS users, MAX(created_at) AS last_launch_at FROM launches")),
-    safeFirst(db.prepare("SELECT COUNT(*) AS launches, COUNT(DISTINCT user_id) AS users FROM launches WHERE date(created_at) = date('now')")),
+    safeFirst(db.prepare("SELECT COUNT(*) AS launches, COUNT(DISTINCT user_id) AS users FROM launches WHERE created_at >= strftime('%Y-%m-%d 00:00:00','now')")),
     safeFirst(db.prepare("SELECT COUNT(*) AS launches, COUNT(DISTINCT user_id) AS users FROM launches WHERE created_at >= datetime('now','-7 days')")),
     safeFirst(db.prepare("SELECT COUNT(*) AS users FROM (SELECT user_id, MIN(created_at) AS first_at FROM launches WHERE created_at IS NOT NULL GROUP BY user_id) WHERE date(first_at) = date('now')")),
     safeFirst(db.prepare("SELECT COUNT(*) AS users FROM (SELECT user_id, MIN(created_at) AS first_at FROM launches WHERE created_at IS NOT NULL GROUP BY user_id) WHERE first_at >= datetime('now','-7 days')")),
