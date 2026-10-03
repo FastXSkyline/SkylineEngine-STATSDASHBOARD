@@ -1,11 +1,14 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
-
 var index_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders() });
+    // === VERSION CHECK: visit /api/version to verify optimized code is running ===
+    if (url.pathname === "/api/version" && request.method === "GET") {
+      return new Response(JSON.stringify({ version: "optimized-v2", cacheEnabled: true, fixes: ["stats-cache-2min", "auth-schema-cached", "auth-session-cached-60s"], deployedAt: new Date().toISOString() }), { headers: { "Content-Type": "application/json", "X-Skyline-Optimized": "v2", ...corsHeaders() } });
+    }
     if (url.pathname === "/api/auth/login" && request.method === "POST") return keyAuthLogin(request, env);
     if (url.pathname === "/api/auth/logout" && request.method === "POST") return logout(request, env);
     if (url.pathname === "/api/auth/session" && request.method === "GET") return json({ authenticated: await isAuthenticated(request, env) });
