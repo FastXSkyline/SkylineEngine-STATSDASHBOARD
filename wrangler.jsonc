@@ -1,4 +1,7 @@
 {
+git clone https://github.com/FastXSkyline/SkylineEngine-STATSDASHBOARD
+cd SkylineEngine-STATSDASHBOARD
+
 "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "skylineenginestats",
   "main": "./src/index.js",
