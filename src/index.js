@@ -1,6 +1,7 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
+
 var index_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
