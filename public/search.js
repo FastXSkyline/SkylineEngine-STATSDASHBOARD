@@ -82,7 +82,7 @@ $("searchForm").addEventListener("submit",e=>{
 
 setMode(initialMode);
 $("query").value=initialQuery;
-if(initialQuery)search(initialQuery);
+if(initialQuery || initialUser)search(initialQuery,initialUser);
 
 document.addEventListener("click",e=>{
   const button=e.target.closest(".investigate-btn");
