@@ -9,3 +9,8 @@
 .user-once{display:inline-block;margin-top:8px;color:#555963;font-size:7px;text-transform:uppercase;letter-spacing:1px}
 .search-limit{padding:15px 20px;border-top:1px solid rgba(255,255,255,.045);color:#656873;font-size:9px;text-align:center;background:rgba(255,255,255,.012)}
 @media(max-width:520px){.mode-help{width:100%;margin-left:0}.mode-btn{flex:1}}
+
+.user-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+.user-actions .user-once{margin-top:0}
+.investigate-btn{border:1px solid rgba(255,45,45,.22);border-radius:6px;background:rgba(255,45,45,.055);color:#d7a0a0;padding:5px 8px;font:700 7px Inter,Arial,sans-serif;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;transition:.18s}
+.investigate-btn:hover{color:#fff;border-color:rgba(255,45,45,.42);background:rgba(255,45,45,.12);box-shadow:0 0 12px rgba(255,45,45,.08)}
