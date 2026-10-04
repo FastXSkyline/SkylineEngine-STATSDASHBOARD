@@ -56,7 +56,8 @@ async function search(q,userId=""){
   state("Analyzing telemetry",MODE_HELP[currentMode]+".");
   try{
     const userParam=userId?"&user="+encodeURIComponent(userId):"";
-    const res=await fetch("/api/search?q="+encodeURIComponent(q)+"&mode="+encodeURIComponent(currentMode)+"&limit="+(currentMode==="investigate"?500:100)+userParam,{cache:"no-store"});
+    const searchLimit=currentMode==="investigate"?500:currentMode==="everything"?1000:100;
+    const res=await fetch("/api/search?q="+encodeURIComponent(q)+"&mode="+encodeURIComponent(currentMode)+"&limit="+searchLimit+userParam,{cache:"no-store"});
     const data=await res.json().catch(()=>({}));
     if(!res.ok)throw new Error(data.error||"Search failed.");
     render(data.results||[],data.query||q,data);
