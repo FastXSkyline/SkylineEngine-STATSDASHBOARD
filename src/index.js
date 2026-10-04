@@ -184,14 +184,21 @@ async function searchTelemetry(request, env) {
   try {
     const url = new URL(request.url);
     const q = String(url.searchParams.get("q") || "").trim().slice(0, 120);
-    const mode = ["everything", "users", "investigate"].includes(url.searchParams.get("mode"))
+    const mode = ["everything", "users", "all-users", "investigate"].includes(url.searchParams.get("mode"))
       ? url.searchParams.get("mode")
       : "users";
     const requestedLimit = Number.parseInt(url.searchParams.get("limit") || "", 10);
-    const limit = mode === "investigate"
+    const limit = mode === "all-users" ? Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : 100, 1), 100) : mode === "investigate"
       ? Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : 500, 1), 500)
       : Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : 100, 1), 100);
     const targetUser = String(url.searchParams.get("user") || "").trim().slice(0, 120);
+
+    if (mode === "all-users") {
+      const result = await env.DB.prepare("WITH ranked AS (SELECT user_id, user_name, app_version, os, os_version, cpu_model, gpu_model, ram_gb, ram_free_gb, ram_used_pct, monitor_count, screen_w, screen_h, session_id, event, created_at, COUNT(*) OVER (PARTITION BY user_id) AS matched_logs, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) AS rn FROM launches WHERE user_id IS NOT NULL AND CAST(user_id AS TEXT) <> '') SELECT user_id, user_name, app_version, os, os_version, cpu_model, gpu_model, ram_gb, ram_free_gb, ram_used_pct, monitor_count, screen_w, screen_h, session_id, event, created_at, matched_logs FROM ranked WHERE rn = 1 ORDER BY created_at DESC LIMIT ?").bind(limit).all();
+      const rows = result.results || [];
+      const mapped = rows.map(row => ({ userId: row.user_id, userName: row.user_name || "", appVersion: row.app_version || "unknown", os: row.os || "unknown", osVersion: row.os_version || "", cpuModel: row.cpu_model || "", gpuModel: row.gpu_model || "", ramGb: number(row.ram_gb), ramFreeGb: number(row.ram_free_gb), ramUsedPct: number(row.ram_used_pct), monitorCount: number(row.monitor_count), screen: row.screen_w && row.screen_h ? String(row.screen_w) + "x" + String(row.screen_h) : "", sessionId: row.session_id || "", event: row.event || "launch", createdAt: row.created_at, matchedLogs: number(row.matched_logs) }));
+      return json({ query: "", mode, user: null, results: mapped, total: mapped.length, truncated: mapped.length >= limit, limit });
+    }
 
     if (!q && !targetUser) return json({ query: "", mode, results: [], total: 0 });
 
