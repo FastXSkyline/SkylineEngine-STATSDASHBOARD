@@ -2,6 +2,7 @@ const $=id=>document.getElementById(id);
 const params=new URLSearchParams(location.search);
 const initialQuery=params.get("q")||"";
 const initialMode=["everything","users","investigate"].includes(params.get("mode"))?params.get("mode"):"users";
+const initialUser=params.get("user")||"";
 const MODE_HELP={
   everything:"Show every matching telemetry record",
   users:"Show each matching user once",
@@ -39,7 +40,7 @@ function render(rows,q,data){
       ? '<span class="tag muted-tag">'+esc(r.matchedLogs)+" logs</span>"
       : "";
     const investigateHint=currentMode==="users"
-      ? '<span class="user-once">Latest matching event</span>'
+      ? '<div class="user-actions"><span class="user-once">Latest matching event · '+esc(r.matchedLogs||1)+' matching logs</span><button type="button" class="investigate-btn" data-user-id="'+esc(r.userId||"")+'">Investigate user →</button></div>'
       : "";
     return '<article class="result-row"><div class="result-main"><div class="result-title"><strong>'+esc(r.userName||"Unknown user")+'</strong><span class="tag">'+esc(r.event||"launch")+'</span>'+matchedLogs+'</div><div class="result-id">'+esc(r.userId||"No user ID")+'</div><div class="chips"><span>'+esc(r.os)+" "+esc(r.osVersion)+'</span><span>'+esc(r.appVersion||"unknown")+'</span><span>'+esc(r.screen||"resolution unknown")+'</span></div>'+investigateHint+'</div><div class="hardware"><div><small>CPU</small><b>'+esc(r.cpuModel||"Unknown")+'</b></div><div><small>GPU</small><b>'+esc(r.gpuModel||"Unknown")+'</b></div></div><div class="result-meta"><span>'+esc(r.sessionId||"No session")+'</span><time>'+ago(r.createdAt)+'</time></div></article>'
   }).join("");
@@ -49,16 +50,17 @@ function render(rows,q,data){
   }
 }
 
-async function search(q){
+async function search(q,userId=""){
   $("resultTitle").textContent="Searching…";
   $("resultCount").textContent="";
   state("Analyzing telemetry",MODE_HELP[currentMode]+".");
   try{
-    const res=await fetch("/api/search?q="+encodeURIComponent(q)+"&mode="+encodeURIComponent(currentMode)+"&limit="+(currentMode==="investigate"?500:100),{cache:"no-store"});
+    const userParam=userId?"&user="+encodeURIComponent(userId):"";
+    const res=await fetch("/api/search?q="+encodeURIComponent(q)+"&mode="+encodeURIComponent(currentMode)+"&limit="+(currentMode==="investigate"?500:100)+userParam,{cache:"no-store"});
     const data=await res.json().catch(()=>({}));
     if(!res.ok)throw new Error(data.error||"Search failed.");
     render(data.results||[],data.query||q,data);
-    history.replaceState(null,"","/search.html?q="+encodeURIComponent(q)+"&mode="+encodeURIComponent(currentMode));
+    history.replaceState(null,"","/search.html?q="+encodeURIComponent(q)+"&mode="+encodeURIComponent(currentMode)+(userId?"&user="+encodeURIComponent(userId):""));
   }catch(e){
     $("summary").hidden=true;
     state("Search unavailable",e.message||"Could not query telemetry.")
@@ -81,3 +83,14 @@ $("searchForm").addEventListener("submit",e=>{
 setMode(initialMode);
 $("query").value=initialQuery;
 if(initialQuery)search(initialQuery);
+
+document.addEventListener("click",e=>{
+  const button=e.target.closest(".investigate-btn");
+  if(!button)return;
+  const userId=button.dataset.userId||"";
+  const q=$("query").value.trim();
+  if(!userId)return;
+  currentMode="investigate";
+  setMode("investigate");
+  search(q,userId);
+});
