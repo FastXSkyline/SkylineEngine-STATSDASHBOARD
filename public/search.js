@@ -1,12 +1,13 @@
 const $=id=>document.getElementById(id);
 const params=new URLSearchParams(location.search);
 const initialQuery=params.get("q")||"";
-const initialMode=["everything","users","investigate"].includes(params.get("mode"))?params.get("mode"):"users";
+const initialMode=["everything","users","all-users","investigate"].includes(params.get("mode"))?params.get("mode"):"users";
 const initialUser=params.get("user")||"";
 const MODE_HELP={
   everything:"Show every matching telemetry record",
   users:"Show each matching user once",
-  investigate:"Show the matching activity log in detail"
+  investigate:"Show the matching activity log in detail",
+  "all-users":"Show every unique user in the database"
 };
 let currentMode=initialMode;
 
@@ -71,19 +72,19 @@ async function search(q,userId=""){
 document.querySelectorAll(".mode-btn").forEach(btn=>btn.addEventListener("click",()=>{
   setMode(btn.dataset.mode);
   const q=$("query").value.trim();
-  if(q)search(q);
+  if(q||currentMode==="all-users")search(q);
 }));
 
 $("searchForm").addEventListener("submit",e=>{
   e.preventDefault();
   const q=$("query").value.trim();
-  if(!q)return;
+  if(!q&&currentMode!=="all-users")return;
   search(q);
 });
 
 setMode(initialMode);
 $("query").value=initialQuery;
-if(initialQuery || initialUser)search(initialQuery,initialUser);
+if(initialQuery || initialUser || initialMode==="all-users")search(initialQuery,initialUser);
 
 document.addEventListener("click",e=>{
   const button=e.target.closest(".investigate-btn");
