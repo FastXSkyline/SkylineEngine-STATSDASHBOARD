@@ -191,13 +191,23 @@ async function searchTelemetry(request, env) {
     const limit = mode === "investigate"
       ? Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : 500, 1), 500)
       : Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : 100, 1), 100);
+    const targetUser = String(url.searchParams.get("user") || "").trim().slice(0, 120);
 
-    if (!q) return json({ query: "", mode, results: [], total: 0 });
+    if (!q && !targetUser) return json({ query: "", mode, results: [], total: 0 });
 
     await ensureTelemetrySchema(env.DB);
-    const like = "%" + q + "%";
-    const where = "CAST(user_id AS TEXT) LIKE ? OR COALESCE(user_name, '') LIKE ? OR COALESCE(app_version, '') LIKE ? OR COALESCE(os, '') LIKE ? OR COALESCE(os_version, '') LIKE ? OR COALESCE(cpu_model, '') LIKE ? OR COALESCE(gpu_model, '') LIKE ? OR COALESCE(session_id, '') LIKE ?";
-    const binds = [like, like, like, like, like, like, like, like];
+
+    let where;
+    let binds;
+
+    if (mode === "investigate" && targetUser) {
+      where = "CAST(user_id AS TEXT) = ?";
+      binds = [targetUser];
+    } else {
+      const like = "%" + q + "%";
+      where = "CAST(user_id AS TEXT) LIKE ? OR COALESCE(user_name, '') LIKE ? OR COALESCE(app_version, '') LIKE ? OR COALESCE(os, '') LIKE ? OR COALESCE(os_version, '') LIKE ? OR COALESCE(cpu_model, '') LIKE ? OR COALESCE(gpu_model, '') LIKE ? OR COALESCE(session_id, '') LIKE ?";
+      binds = [like, like, like, like, like, like, like, like];
+    }
 
     let sql;
     if (mode === "users") {
@@ -248,9 +258,10 @@ async function searchTelemetry(request, env) {
     return json({
       query: q,
       mode,
+      user: targetUser || null,
       results: mapped,
       total: mapped.length,
-      truncated: mode === "investigate" && mapped.length >= limit,
+      truncated: mode !== "users" && mapped.length >= limit,
       limit
     });
   } catch (error) {
