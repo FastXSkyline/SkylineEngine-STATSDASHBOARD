@@ -384,44 +384,36 @@ function renderVersions(versions) {
   $("versionMeta").textContent = `top ${top.version} · ${top.pct}%`;
 }
 
-function renderHardware(hardware) {
-  const trio = $("hardwareTrio");
-  const hasSamples = hardware && hardware.samples > 0;
+function renderCountries(rows) {
+  const list = $("countryList");
+  const meta = $("countryMeta");
+  if (!list || !meta) return;
 
-  const items = hasSamples
-    ? [
-        ["Avg CPU", hardware.avgCores ? `${hardware.avgCores} cores` : "—"],
-        ["Avg memory", hardware.avgRamGb ? `${hardware.avgRamGb} GB` : "—"],
-        ["RAM used", hardware.avgRamUsedPct != null ? `${hardware.avgRamUsedPct}%` : "—"],
-        ["Top resolution", hardware.commonScreen ? hardware.commonScreen.replace("x", " × ") : "—"]
-      ]
-    : [
-        ["Avg CPU", "—"],
-        ["Avg memory", "—"],
-        ["RAM used", "—"],
-        ["Top resolution", "—"]
-      ];
+  const data = Array.isArray(rows) ? rows : [];
+  if (!data.length) {
+    meta.textContent = "no data";
+    list.innerHTML = '<li class="pc-empty">No country data yet</li>';
+    return;
+  }
 
-  trio.innerHTML = items
-    .map(([label, value]) => `<div class="trio-item"><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`)
-    .join("");
+  const totalUsers = data.reduce((sum, row) => sum + Number(row.users || 0), 0);
+  meta.textContent = formatNumber(totalUsers) + " users";
 
-  $("hardwareMeta").textContent = hasSamples ? `${formatNumber(hardware.samples)} samples` : "no data";
+  list.innerHTML = data.slice(0, 8).map((row) => {
+    const country = String(row.country || "UNKNOWN").toUpperCase();
+    const users = Number(row.users || 0);
+    const pct = totalUsers > 0 ? Math.round((users / totalUsers) * 100) : 0;
 
-  const renderModels = (id, rows, emptyLabel) => {
-    const list = $(id);
-    if (!list) return;
-    if (!rows || !rows.length) {
-      list.innerHTML = `<span>${emptyLabel}</span>`;
-      return;
-    }
-    list.innerHTML = rows.slice(0, 3).map((row) =>
-      `<span title="${escapeHtml(row.model)}">${escapeHtml(row.model)} <b>${formatNumber(row.launches)}</b></span>`
-    ).join("");
-  };
-  renderModels("cpuModelsList", hardware.cpuModels, "No CPU model data");
-  renderModels("gpuModelsList", hardware.gpuModels, "No GPU model data");
+    return (
+      '<li class="bar-item">' +
+      '<span class="bar-item-label">' + escapeHtml(country) + '</span>' +
+      '<span class="bar-track"><i style="width:' + pct + '%"></i></span>' +
+      '<strong>' + formatNumber(users) + '</strong>' +
+      '</li>'
+    );
+  }).join("");
 }
+
 
 /* ------------------------------------------------------------
    Recent table
@@ -542,7 +534,7 @@ function renderRecentGrouped(rows) {
   for (const row of rows) {
     const key = row.userId || `row-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
     if (!groups.has(key)) {
-      groups.set(key, { id: key, name: row.userName || "Unknown", userId: row.userId, launches: [], total: 0 });
+      groups.set(key, { id: key, name: row.discordUsername || row.pcUsername || row.userName || "Unknown", pcUsername: row.pcUsername || "", countryCode: row.countryCode || "", userId: row.userId, launches: [], total: 0 });
     }
     const group = groups.get(key);
     group.launches.push(row);
@@ -640,7 +632,7 @@ function renderUserDetails(rows, totalUsers, degraded) {
 
   if (degraded) {
     tag.textContent = "Needs migration";
-    body.innerHTML = `<tr><td colspan="6" class="empty-table"><span class="empty-chip">${emptyChipIcon()}Per-user details unlock after the D1 migration (migrations/0001_telemetry_columns.sql)</span></td></tr>`;
+    body.innerHTML = `<tr><td colspan="6" class="empty-table"><span class="empty-chip">${emptyChipIcon()}Per-user details unlock after the D1 migration.</span></td></tr>`;
     return;
   }
 
@@ -654,16 +646,17 @@ function renderUserDetails(rows, totalUsers, degraded) {
 
   body.innerHTML = rows
     .map((row) => {
-      const name = platformName(row.os, row.osVersion);
+      const discord = String(row.discordUsername || "").trim();
+      const pc = String(row.pcUsername || "").trim();
+      const identity = discord || pc || row.userName || "Unknown";
+      const secondary = discord && pc ? pc : (row.userId || "");
 
       return (
         `<tr>` +
-        `<td>${userCell(row.userName, row.userId)}</td>` +
-        `<td><span class="cell-launches">${formatNumber(row.launches)}</span></td>` +
+        `<td><span class="user-cell"><span class="user-name" title="${escapeHtml(identity)}">${escapeHtml(identity)}</span><span class="user-id" title="${escapeHtml(secondary)}">${escapeHtml(secondary)}</span></span></td>` +
+        `<td><span class="cell-version">${escapeHtml(row.countryCode || "—")}</span></td>` +
+        `<td class="num"><span class="cell-launches">${formatNumber(row.launches)}</span></td>` +
         `<td><span class="cell-version">${escapeHtml(row.version || "unknown")}</span></td>` +
-        `<td><span class="cell-platform"><span class="platform-ic">${platformIcon(row.os)}</span>${escapeHtml(
-          name
-        )}</span></td>` +
         `<td class="muted-cell">${row.firstSeen ? relativeTime(row.firstSeen) : "—"}</td>` +
         `<td class="num muted-cell">${row.lastSeen ? relativeTime(row.lastSeen) : "—"}</td>` +
         `</tr>`
@@ -716,7 +709,7 @@ function applyStats(data) {
   renderMicrocharts(series);
   renderPlatforms(data.platforms || [], launches);
   renderVersions(data.versions || []);
-  renderHardware(data.hardware || {});
+  renderCountries(data.countries || []);
   state.recentTotalUsers = Number(data.recentTotalUsers || 0);
     state.recentPage = Number(data.recentPage || state.recentPage || 1);
     renderRecent(data.recent || [], state.mode);
