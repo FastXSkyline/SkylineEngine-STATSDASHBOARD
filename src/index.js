@@ -24,7 +24,6 @@ var index_default = {
     if (["/launch","/launchstats","/api/launch","/api/launchstats","/stats/launch"].includes(url.pathname) && request.method === "POST") {
       try {
         const rawBody = await request.json();
-        await ensureTelemetrySchema(env.DB);
         const body = rawBody?.launchstats && typeof rawBody.launchstats === "object" ? { ...rawBody.launchstats, ...rawBody } : rawBody;
         const userId = body.user_id ?? body.userId ?? body.userid ?? body.userID ?? body.id;
         if (!userId) return json({ error: "user_id is required" }, 400);
