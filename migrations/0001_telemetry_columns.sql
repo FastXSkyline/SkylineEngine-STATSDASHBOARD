@@ -1,23 +1,32 @@
--- Adds telemetry columns to `launches` so the dashboard can show daily
--- activity, platform/version breakdowns and recent records.
+-- Legacy telemetry migration.
+-- Existing installations may already have the first set of columns.
+-- The Worker also keeps an idempotent compatibility path for these fields.
 --
--- Run once against the remote D1 database:
+-- New identity/location fields:
+--   discord_username
+--   discord_user_id
+--   pc_username
+--   computer_name
+--   country_code
+--   timezone
+--   os_name
+--   client_timestamp
+--
+-- Run once against the remote D1 database if these columns are not already
+-- present:
 --   npx wrangler d1 execute skylineenginestatsdb --remote --file ./migrations/0001_telemetry_columns.sql
 --
--- NOTE: existing rows intentionally keep created_at = NULL. They still count
--- toward total launches / total users, but they are excluded from time based
--- metrics (today, daily chart, recent table), so no historical data is faked.
+-- Existing rows remain unchanged.
 
-ALTER TABLE launches ADD COLUMN created_at TEXT;
-ALTER TABLE launches ADD COLUMN os TEXT;
-ALTER TABLE launches ADD COLUMN os_version TEXT;
-ALTER TABLE launches ADD COLUMN arch TEXT;
-ALTER TABLE launches ADD COLUMN locale TEXT;
-ALTER TABLE launches ADD COLUMN tz_offset_min INTEGER;
-ALTER TABLE launches ADD COLUMN screen_w INTEGER;
-ALTER TABLE launches ADD COLUMN screen_h INTEGER;
-ALTER TABLE launches ADD COLUMN cpu_cores INTEGER;
-ALTER TABLE launches ADD COLUMN ram_gb INTEGER;
-ALTER TABLE launches ADD COLUMN event TEXT DEFAULT 'launch';
+ALTER TABLE launches ADD COLUMN os_name TEXT;
+ALTER TABLE launches ADD COLUMN country_code TEXT;
+ALTER TABLE launches ADD COLUMN timezone TEXT;
+ALTER TABLE launches ADD COLUMN discord_username TEXT;
+ALTER TABLE launches ADD COLUMN discord_user_id TEXT;
+ALTER TABLE launches ADD COLUMN pc_username TEXT;
+ALTER TABLE launches ADD COLUMN computer_name TEXT;
+ALTER TABLE launches ADD COLUMN client_timestamp INTEGER;
 
-CREATE INDEX IF NOT EXISTS idx_launches_created_at ON launches(created_at);
+CREATE INDEX IF NOT EXISTS idx_launches_country ON launches(country_code);
+CREATE INDEX IF NOT EXISTS idx_launches_discord_id ON launches(discord_user_id);
+CREATE INDEX IF NOT EXISTS idx_launches_pc_username ON launches(pc_username);
