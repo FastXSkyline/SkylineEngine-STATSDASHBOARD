@@ -7,7 +7,7 @@ var index_default = {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders() });
     // === VERSION CHECK: visit /api/version to verify optimized code is running ===
     if (url.pathname === "/api/version" && request.method === "GET") {
-      return new Response(JSON.stringify({ version: "optimized-v6", cacheEnabled: true, cacheTTL: "5min", fixes: ["stats-cache-5min", "stable-cache-key", "client-polling-60s", "auth-schema-cached", "auth-session-cached-60s", "query-indexes", "shared-d1-releases", "all-users-cache-60s", "recent-grouped-single-scan"], deployedAt: new Date().toISOString() }), { headers: { "Content-Type": "application/json", "X-Skyline-Optimized": "v6", ...corsHeaders() } });
+      return new Response(JSON.stringify({ version: "optimized-v7-telemetry", cacheEnabled: true, cacheTTL: "5min", fixes: ["stats-cache-5min", "stable-cache-key", "client-polling-120s", "auth-schema-cached", "auth-session-cached-60s", "query-indexes", "shared-d1-releases", "all-users-cache-60s", "recent-grouped-single-scan", "identity-location-telemetry", "hardware-analytics-removed"], deployedAt: new Date().toISOString() }), { headers: { "Content-Type": "application/json", "X-Skyline-Optimized": "v7", ...corsHeaders() } });
     }
     if (url.pathname === "/api/auth/login" && request.method === "POST") return keyAuthLogin(request, env);
     if (url.pathname === "/api/auth/logout" && request.method === "POST") return logout(request, env);
@@ -28,7 +28,7 @@ var index_default = {
         const body = rawBody?.launchstats && typeof rawBody.launchstats === "object" ? { ...rawBody.launchstats, ...rawBody } : rawBody;
         const userId = body.user_id ?? body.userId ?? body.userid ?? body.userID ?? body.id;
         if (!userId) return json({ error: "user_id is required" }, 400);
-        try { await env.DB.prepare("INSERT INTO launches (user_id, user_name, app_version, os, os_version, arch, locale, tz_offset_min, screen_w, screen_h, cpu_cores, ram_gb, cpu_model, gpu_model, ram_free_gb, ram_used_pct, monitor_count, session_id, event, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,strftime('%Y-%m-%d %H:%M:%S','now'))").bind(String(userId), text(body.user_name ?? body.userName ?? body.username, 64, null), text(body.app_version ?? body.appVersion ?? body.version, 64, "unknown"), text(body.os, 32, "unknown"), text(body.os_version, 32, null), text(body.arch, 16, null), text(body.locale, 24, null), int(body.tz_offset_min, -840, 840), int(body.screen_w, 0, 3e4), int(body.screen_h, 0, 3e4), int(body.cpu_cores, 0, 1024), int(body.ram_gb, 0, 102400), text(body.cpu_model, 128, null), text(body.gpu_model, 128, null), int(body.ram_free_gb, 0, 102400), int(body.ram_used_pct, 0, 100), int(body.monitor_count, 1, 32), text(body.session_id, 64, null), text(body.event, 32, "launch")).run(); }
+        try { await env.DB.prepare("INSERT INTO launches (user_id, user_name, app_version, os, os_name, os_version, arch, locale, country_code, timezone, tz_offset_min, cpu_model, gpu_model, session_id, event, created_at, discord_username, discord_user_id, pc_username, computer_name, client_timestamp) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(String(userId), text(body.user_name ?? body.userName ?? body.username, 64, null), text(body.app_version ?? body.appVersion ?? body.version, 64, "unknown"), text(body.os, 32, "windows"), text(body.os_name, 64, null), text(body.os_version, 32, null), text(body.arch, 16, null), text(body.locale, 24, null), text(body.country_code ?? body.countryCode, 8, null), text(body.timezone ?? body.timeZone, 128, null), int(body.tz_offset_min, -840, 840), text(body.cpu_model, 128, null), text(body.gpu_model, 128, null), text(body.session_id, 64, null), text(body.event, 32, "launch"), text(body.created_at, 32, null) ?? "", text(body.discord_username, 128, null), text(body.discord_user_id, 64, null), text(body.pc_username, 128, null), text(body.computer_name, 128, null), int(body.client_timestamp, 0, 2147483647)).run(); }
         catch (e) { try { await env.DB.prepare("INSERT INTO launches (user_id, app_version) VALUES (?, ?)").bind(userId, text(body.app_version, 64, "unknown")).run(); } catch (e2) { await env.DB.prepare("INSERT INTO launches (user_id) VALUES (?)").bind(userId).run(); } }
         return json({ success: true });
       } catch (error) { return json({ error: "Failed to record launch" }, 500); }
@@ -76,7 +76,7 @@ var index_default = {
 };
 
 var SESSION_COOKIE = "skyline_admin_session";
-var TELEMETRY_COLUMNS = [["created_at","TEXT"],["os","TEXT"],["os_version","TEXT"],["arch","TEXT"],["locale","TEXT"],["tz_offset_min","INTEGER"],["screen_w","INTEGER"],["screen_h","INTEGER"],["cpu_cores","INTEGER"],["ram_gb","INTEGER"],["event","TEXT DEFAULT 'launch'"],["cpu_model","TEXT"],["gpu_model","TEXT"],["ram_free_gb","INTEGER"],["ram_used_pct","INTEGER"],["monitor_count","INTEGER"],["session_id","TEXT"]];
+var TELEMETRY_COLUMNS = [["created_at","TEXT"],["os","TEXT"],["os_name","TEXT"],["os_version","TEXT"],["arch","TEXT"],["locale","TEXT"],["country_code","TEXT"],["timezone","TEXT"],["tz_offset_min","INTEGER"],["event","TEXT DEFAULT 'launch'"],["cpu_model","TEXT"],["gpu_model","TEXT"],["session_id","TEXT"],["discord_username","TEXT"],["discord_user_id","TEXT"],["pc_username","TEXT"],["computer_name","TEXT"],["client_timestamp","INTEGER"]];
 
 var telemetrySchemaPromise = null;
 async function ensureTelemetrySchema(db) {
@@ -285,37 +285,152 @@ async function searchTelemetry(request, env) {
 }
 __name(searchTelemetry, "searchTelemetry");
 
-function legacyStats(row) { const launches = number(row?.launches), users = number(row?.users); return { launches, users, launchesToday: 0, usersToday: 0, newUsersToday: 0, launches7d: 0, activeUsers7d: 0, newUsers7d: 0, lastLaunchAt: null, avgLaunchesPerUser: users > 0 ? round(launches / users, 2) : 0, days: 14, series: [], platforms: [], versions: [], hardware: { avgCores: null, avgRamGb: null, commonScreen: null, samples: 0 }, recent: [], userDetails: [], degraded: true }; }
+function legacyStats(row) { const launches = number(row?.launches), users = number(row?.users); return { launches, users, launchesToday: 0, usersToday: 0, newUsersToday: 0, launches7d: 0, activeUsers7d: 0, newUsers7d: 0, lastLaunchAt: null, avgLaunchesPerUser: users > 0 ? round(launches / users, 2) : 0, days: 14, series: [], platforms: [], versions: [], countries: [], timezones: [], recent: [], userDetails: [], degraded: true }; }
 __name(legacyStats, "legacyStats");
 
 async function buildStats(db, days, recentMode, recentPage) {
-  recentMode = recentMode || "grouped"; recentPage = recentPage || 1;
+  recentMode = recentMode || "grouped";
+  recentPage = recentPage || 1;
+
   const hourSince = "-" + days * 24 + " hours";
   const safeAll = async (s) => { try { return await s.all(); } catch (_) { return { results: [] }; } };
   const safeFirst = async (s) => { try { return await s.first(); } catch (_) { return null; } };
-  const [totals, today, week, newToday, newWeek, seriesRows, newSeriesRows, platformRows, versionRows, hardwareRow, cpuRows, gpuRows, recentRows, recentUserCount, userRows] = await Promise.all([
+
+  // Keep this list deliberately small. The expensive hardware aggregations were
+  // removed; identity/location analytics replace them.
+  const [
+    totals,
+    today,
+    week,
+    newToday,
+    newWeek,
+    seriesRows,
+    newSeriesRows,
+    platformRows,
+    versionRows,
+    countryRows,
+    timezoneRows,
+    recentRows,
+    recentUserCount,
+    userRows
+  ] = await Promise.all([
     safeFirst(db.prepare("SELECT COUNT(*) AS launches, COUNT(DISTINCT user_id) AS users, MAX(created_at) AS last_launch_at FROM launches")),
+
     safeFirst(db.prepare("SELECT COUNT(*) AS launches, COUNT(DISTINCT user_id) AS users FROM launches WHERE created_at >= strftime('%Y-%m-%d 00:00:00','now')")),
+
     safeFirst(db.prepare("SELECT COUNT(*) AS launches, COUNT(DISTINCT user_id) AS users FROM launches WHERE created_at >= datetime('now','-7 days')")),
+
     safeFirst(db.prepare("SELECT COUNT(*) AS users FROM (SELECT user_id, MIN(created_at) AS first_at FROM launches WHERE created_at IS NOT NULL GROUP BY user_id) WHERE date(first_at) = date('now')")),
+
     safeFirst(db.prepare("SELECT COUNT(*) AS users FROM (SELECT user_id, MIN(created_at) AS first_at FROM launches WHERE created_at IS NOT NULL GROUP BY user_id) WHERE first_at >= datetime('now','-7 days')")),
-    safeAll(db.prepare("SELECT date(created_at) AS day, strftime('%Y-%m-%dT%H:00:00', created_at) AS hour_bucket, COUNT(*) AS launches, COUNT(DISTINCT user_id) AS users FROM launches WHERE created_at >= datetime('now', ?) GROUP BY hour_bucket ORDER BY hour_bucket").bind(hourSince)),
+
+    safeAll(db.prepare("SELECT strftime('%Y-%m-%dT%H:00:00', created_at) AS hour_bucket, COUNT(*) AS launches, COUNT(DISTINCT user_id) AS users FROM launches WHERE created_at >= datetime('now', ?) GROUP BY hour_bucket ORDER BY hour_bucket").bind(hourSince)),
+
     safeAll(db.prepare("SELECT strftime('%Y-%m-%dT%H:00:00', first_at) AS hour_bucket, COUNT(*) AS users FROM (SELECT user_id, MIN(created_at) AS first_at FROM launches WHERE created_at IS NOT NULL GROUP BY user_id) WHERE first_at >= datetime('now', ?) GROUP BY hour_bucket ORDER BY hour_bucket").bind(hourSince)),
+
     safeAll(db.prepare("SELECT COALESCE(NULLIF(os, ''), 'unknown') AS os, COALESCE(NULLIF(os_version, ''), '') AS os_version, COUNT(*) AS launches FROM launches GROUP BY os, os_version ORDER BY launches DESC LIMIT 6")),
+
     safeAll(db.prepare("SELECT COALESCE(app_version, 'unknown') AS version, COUNT(*) AS launches FROM launches GROUP BY app_version ORDER BY launches DESC LIMIT 5")),
-    // === OPTIMIZED: single pass instead of 5 subqueries ===
-    safeFirst(db.prepare("SELECT ROUND(AVG(CASE WHEN cpu_cores > 0 THEN cpu_cores END), 1) AS avg_cores, ROUND(AVG(CASE WHEN ram_gb > 0 THEN ram_gb END), 1) AS avg_ram, ROUND(AVG(CASE WHEN ram_used_pct >= 0 THEN ram_used_pct END), 1) AS avg_ram_used_pct, COUNT(CASE WHEN cpu_cores > 0 THEN 1 END) AS samples FROM launches")),
-    safeAll(db.prepare("SELECT COALESCE(NULLIF(cpu_model, ''), 'Unknown CPU') AS model, COUNT(*) AS launches FROM launches WHERE cpu_model IS NOT NULL AND cpu_model <> '' GROUP BY cpu_model ORDER BY launches DESC LIMIT 5")),
-    safeAll(db.prepare("SELECT COALESCE(NULLIF(gpu_model, ''), 'Unknown GPU') AS model, COUNT(*) AS launches FROM launches WHERE gpu_model IS NOT NULL AND gpu_model <> '' GROUP BY gpu_model ORDER BY launches DESC LIMIT 5")),
-    // === OPTIMIZED: window functions instead of correlated subqueries ===
-    safeAll(db.prepare(recentMode === "grouped" ? "WITH top_users AS (SELECT user_id, COUNT(*) AS user_launches, MIN(created_at) AS first_at, MAX(created_at) AS last_at FROM launches WHERE created_at IS NOT NULL GROUP BY user_id ORDER BY last_at DESC LIMIT ? OFFSET ?) SELECT l.user_id, l.user_name, l.app_version, COALESCE(l.os, 'unknown') AS os, COALESCE(l.os_version, '') AS os_version, l.created_at, l.cpu_model, l.gpu_model, l.ram_used_pct, l.monitor_count, l.session_id, t.user_launches, (l.created_at = t.first_at) AS is_first FROM top_users t JOIN launches l ON l.user_id = t.user_id AND l.created_at = t.last_at ORDER BY t.last_at DESC" : "SELECT user_id, user_name, app_version, COALESCE(os, 'unknown') AS os, COALESCE(os_version, '') AS os_version, created_at, cpu_model, gpu_model, ram_used_pct, monitor_count, session_id, 1 AS user_launches, 0 AS is_first FROM launches WHERE created_at IS NOT NULL ORDER BY created_at DESC LIMIT 1000").bind(...recentMode === "grouped" ? [25, (recentPage - 1) * 25] : [])),
+
+    safeAll(db.prepare("SELECT COALESCE(NULLIF(country_code, ''), 'UNKNOWN') AS country, COUNT(DISTINCT user_id) AS users, COUNT(*) AS launches FROM launches WHERE country_code IS NOT NULL AND country_code <> '' GROUP BY country_code ORDER BY users DESC, launches DESC LIMIT 15")),
+
+    safeAll(db.prepare("SELECT COALESCE(NULLIF(timezone, ''), 'Unknown') AS timezone, COUNT(DISTINCT user_id) AS users, COUNT(*) AS launches FROM launches WHERE timezone IS NOT NULL AND timezone <> '' GROUP BY timezone ORDER BY users DESC, launches DESC LIMIT 10")),
+
+    safeAll(db.prepare(
+      recentMode === "grouped"
+        ? "WITH top_users AS (SELECT user_id, COUNT(*) AS user_launches, MIN(created_at) AS first_at, MAX(created_at) AS last_at FROM launches WHERE created_at IS NOT NULL GROUP BY user_id ORDER BY last_at DESC LIMIT ? OFFSET ?) SELECT l.user_id, l.user_name, l.discord_username, l.discord_user_id, l.pc_username, l.computer_name, l.country_code, l.timezone, l.app_version, COALESCE(l.os_name, l.os, 'unknown') AS os_name, COALESCE(l.os_version, '') AS os_version, l.created_at, l.session_id, t.user_launches, (l.created_at = t.first_at) AS is_first FROM top_users t JOIN launches l ON l.user_id = t.user_id AND l.created_at = t.last_at ORDER BY t.last_at DESC"
+        : "SELECT user_id, user_name, discord_username, discord_user_id, pc_username, computer_name, country_code, timezone, app_version, COALESCE(os_name, os, 'unknown') AS os_name, COALESCE(os_version, '') AS os_version, created_at, session_id, 1 AS user_launches, 0 AS is_first FROM launches WHERE created_at IS NOT NULL ORDER BY created_at DESC LIMIT 1000"
+    ).bind(...recentMode === "grouped" ? [25, (recentPage - 1) * 25] : [])),
+
     safeFirst(db.prepare("SELECT COUNT(DISTINCT user_id) AS users FROM launches WHERE created_at IS NOT NULL")),
-    // === OPTIMIZED: single query with window functions instead of 4 correlated subqueries per user ===
-    safeAll(db.prepare("WITH ranked AS (SELECT user_id, user_name, app_version, os, os_version, created_at, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) AS rn, COUNT(*) OVER (PARTITION BY user_id) AS launches, MIN(created_at) OVER (PARTITION BY user_id) AS first_at, MAX(created_at) OVER (PARTITION BY user_id) AS last_at FROM launches WHERE created_at IS NOT NULL) SELECT user_id, user_name, launches, first_at, last_at, app_version AS last_version, COALESCE(NULLIF(os, ''), 'unknown') AS last_os, COALESCE(os_version, '') AS last_os_version FROM ranked WHERE rn = 1 ORDER BY last_at DESC LIMIT 20"))
+
+    safeAll(db.prepare("WITH ranked AS (SELECT user_id, user_name, discord_username, discord_user_id, pc_username, computer_name, country_code, timezone, app_version, os_name, os_version, created_at, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) AS rn, COUNT(*) OVER (PARTITION BY user_id) AS launches, MIN(created_at) OVER (PARTITION BY user_id) AS first_at, MAX(created_at) OVER (PARTITION BY user_id) AS last_at FROM launches WHERE created_at IS NOT NULL) SELECT user_id, user_name, discord_username, discord_user_id, pc_username, computer_name, country_code, timezone, launches, first_at, last_at, app_version AS last_version, COALESCE(NULLIF(os_name, ''), 'Windows') AS last_os, COALESCE(os_version, '') AS last_os_version FROM ranked WHERE rn = 1 ORDER BY last_at DESC LIMIT 20"))
   ]);
+
   const totalsRow = totals || {};
-  const launches = number(totalsRow.launches), users = number(totalsRow.users);
-  return { launches, users, launchesToday: number(today?.launches), usersToday: number(today?.users), newUsersToday: number(newToday?.users), launches7d: number(week?.launches), activeUsers7d: number(week?.users), newUsers7d: number(newWeek?.users), lastLaunchAt: totalsRow.last_launch_at || null, avgLaunchesPerUser: users > 0 ? round(launches / users, 2) : 0, days, series: buildSeries(days, seriesRows.results || [], newSeriesRows.results || []), platforms: buildPlatforms(platformRows.results || [], launches), versions: buildVersions(versionRows.results || [], launches), hardware: { avgCores: number(hardwareRow?.avg_cores) || null, avgRamGb: number(hardwareRow?.avg_ram) || null, commonScreen: null, avgRamUsedPct: number(hardwareRow?.avg_ram_used_pct) || null, samples: number(hardwareRow?.samples), cpuModels: (cpuRows.results || []).map(r => ({ model: r.model, launches: number(r.launches) })), gpuModels: (gpuRows.results || []).map(r => ({ model: r.model, launches: number(r.launches) })) }, recentTotalUsers: number(recentUserCount?.users), recentPage, recentPageSize: 25, recent: (recentRows.results || []).map(row => ({ userId: row.user_id, userName: row.user_name || "", appVersion: row.app_version || "unknown", os: row.os || "unknown", osVersion: row.os_version || "", createdAt: row.created_at, cpuModel: row.cpu_model || "", gpuModel: row.gpu_model || "", ramUsedPct: number(row.ram_used_pct), monitorCount: number(row.monitor_count), sessionId: row.session_id || "", isNew: number(row.is_first) === 1 })), userDetails: (userRows.results || []).map(row => ({ userId: row.user_id, userName: row.user_name || "", launches: number(row.launches), firstSeen: row.first_at, lastSeen: row.last_at, version: row.last_version || "unknown", os: row.last_os || "unknown", osVersion: row.last_os_version || "" })) };
+  const launches = number(totalsRow.launches);
+  const users = number(totalsRow.users);
+
+  return {
+    launches,
+    users,
+    launchesToday: number(today?.launches),
+    usersToday: number(today?.users),
+    newUsersToday: number(newToday?.users),
+    launches7d: number(week?.launches),
+    activeUsers7d: number(week?.users),
+    newUsers7d: number(newWeek?.users),
+    lastLaunchAt: totalsRow.last_launch_at || null,
+    avgLaunchesPerUser: users > 0 ? round(launches / users, 2) : 0,
+    days,
+
+    series: buildSeries(
+      days,
+      seriesRows.results || [],
+      newSeriesRows.results || []
+    ),
+
+    platforms: buildPlatforms(
+      platformRows.results || [],
+      launches
+    ),
+
+    versions: buildVersions(
+      versionRows.results || [],
+      launches
+    ),
+
+    countries: (countryRows.results || []).map(row => ({
+      country: row.country,
+      users: number(row.users),
+      launches: number(row.launches)
+    })),
+
+    timezones: (timezoneRows.results || []).map(row => ({
+      timezone: row.timezone,
+      users: number(row.users),
+      launches: number(row.launches)
+    })),
+
+    recentTotalUsers: number(recentUserCount?.users),
+    recentPage,
+    recentPageSize: 25,
+
+    recent: (recentRows.results || []).map(row => ({
+      userId: row.user_id,
+      userName: row.user_name || "",
+      discordUsername: row.discord_username || "",
+      discordUserId: row.discord_user_id || "",
+      pcUsername: row.pc_username || "",
+      computerName: row.computer_name || "",
+      countryCode: row.country_code || "",
+      timezone: row.timezone || "",
+      appVersion: row.app_version || "unknown",
+      osName: row.os_name || "unknown",
+      osVersion: row.os_version || "",
+      createdAt: row.created_at,
+      sessionId: row.session_id || "",
+      launches: number(row.user_launches),
+      isNew: number(row.is_first) === 1
+    })),
+
+    userDetails: (userRows.results || []).map(row => ({
+      userId: row.user_id,
+      userName: row.user_name || "",
+      discordUsername: row.discord_username || "",
+      discordUserId: row.discord_user_id || "",
+      pcUsername: row.pc_username || "",
+      computerName: row.computer_name || "",
+      countryCode: row.country_code || "",
+      timezone: row.timezone || "",
+      launches: number(row.launches),
+      firstSeen: row.first_at,
+      lastSeen: row.last_at,
+      version: row.last_version || "unknown",
+      osName: row.last_os || "Windows",
+      osVersion: row.last_os_version || ""
+    }))
+  };
 }
 __name(buildStats, "buildStats");
 
